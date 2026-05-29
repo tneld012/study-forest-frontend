@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { Emoji } from "emoji-picker-react";
 import { toast } from "react-toastify";
 import Button from "../components/common/Button.jsx";
-import { getStudyDetail } from "../api/studyApi.js";
+import { deleteStudy, getStudyDetail } from "../api/studyApi.js";
 import { useAuth } from "../contexts/AuthContext.jsx";
 import {
   getMyStudyMembership,
@@ -22,6 +22,7 @@ export default function StudyDetailPage() {
   const [membership, setMembership] = useState(null);
   const [isMembershipLoading, setIsMembershipLoading] = useState(false);
   const [isMembershipSubmitting, setIsMembershipSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const loadMyMembership = async () => {
     if (!isLoggedIn) {
@@ -103,6 +104,30 @@ export default function StudyDetailPage() {
       toast.error(message);
     } finally {
       setIsMembershipSubmitting(false);
+    }
+  };
+
+  const handleDeleteStudy = async () => {
+    const isConfirmed = window.confirm(
+      "정말 이 스터디를 삭제하시겠습니까? 삭제 후에는 목록에서 보이지 않습니다."
+    );
+
+    if (!isConfirmed || isDeleting) return;
+
+    try {
+      setIsDeleting(true);
+
+      await deleteStudy(studyId);
+
+      toast.success("스터디가 삭제되었습니다.");
+      navigate("/");
+    } catch (error) {
+      const message =
+        error.response?.data?.message || "스터디 삭제 중 오류가 발생했습니다.";
+
+      toast.error(message);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -200,7 +225,13 @@ export default function StudyDetailPage() {
               <Link to={`/studies/${study.studyId}/edit`}>
                 <Button variant="secondary">스터디 수정</Button>
               </Link>
-              <Button variant="danger">스터디 삭제</Button>
+              <Button
+                variant="danger"
+                onClick={handleDeleteStudy}
+                disabled={isDeleting}
+              >
+                {isDeleting ? "삭제 중..." : "스터디 삭제"}
+              </Button>
             </>
           ) : isMember ? (
             <>

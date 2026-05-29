@@ -49,3 +49,10 @@ export async function updateStudy(studyId, { name, introduce, backgroundKey, isP
 
   return response.data;
 }
+
+// 📘 스터디 삭제
+export async function deleteStudy(studyId) {
+  const response = await apiClient.delete(`/studies/${studyId}`);
+
+  return response.data;
+}
