@@ -24,3 +24,33 @@ export async function uncheckHabit(studyId, habitId) {
 
   return response.data;
 }
+
+// 🗓️ 습관 생성
+export async function createHabit(studyId, { name }) {
+  const response = await apiClient.post(`/studies/${studyId}/habits`, {
+    name,
+  });
+
+  return response.data;
+}
+
+// 🗓️ 습관 수정
+export async function updateHabit(studyId, habitId, { name }) {
+  const response = await apiClient.patch(
+    `/studies/${studyId}/habits/${habitId}`,
+    {
+      name,
+    }
+  );
+
+  return response.data;
+}
+
+// 🗓️ 습관 종료
+export async function endHabit(studyId, habitId) {
+  const response = await apiClient.delete(
+    `/studies/${studyId}/habits/${habitId}`
+  );
+
+  return response.data;
+}
