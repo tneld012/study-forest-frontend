@@ -1,7 +1,20 @@
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import { useAuth } from "../../contexts/AuthContext";
 
 export default function Header() {
-  const isLoggedIn = false;
+  const navigate = useNavigate();
+  const { user, isLoggedIn, isAuthLoading, logout } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success("로그아웃되었습니다.");
+      navigate("/");
+    } catch {
+      toast.error("로그아웃 중 오류가 발생했습니다.");
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 border-b border-[#E5E2DA] bg-[#F6F4EF]/95 backdrop-blur">
@@ -31,17 +44,18 @@ export default function Header() {
             스터디 만들기
           </Link>
 
-          {isLoggedIn ? (
+          {isAuthLoading ? null : isLoggedIn ? (
             <>
               <Link
                 to="/mypage"
                 className="rounded-full px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-white"
               >
-                마이페이지
+                {user?.nickname ?? "마이페이지"}
               </Link>
 
               <button
                 type="button"
+                onClick={handleLogout}
                 className="rounded-full px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-white"
               >
                 로그아웃

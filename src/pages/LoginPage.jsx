@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import Button from "../components/common/Button";
 import Input from "../components/common/Input";
 import { login } from "../api/authApi";
+import { useAuth } from "../contexts/AuthContext";
 
 // 🔬 이메일 형식 유효성 검사 유틸 함수
 function validateEmail(email) {
@@ -12,6 +13,8 @@ function validateEmail(email) {
 
 export default function LoginPage() {
   const navigate = useNavigate();
+
+  const { refreshMe } = useAuth();
 
   const [form, setForm] = useState({
     email: "",
@@ -53,6 +56,8 @@ export default function LoginPage() {
         email: form.email.trim(),
         password: form.password,
       });
+
+      await refreshMe();
 
       toast.success("로그인에 성공했습니다!");
       navigate("/");
