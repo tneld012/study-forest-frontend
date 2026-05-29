@@ -10,6 +10,15 @@ function minutesToSeconds(minutes) {
   return minutes * 60;
 }
 
+function formatTime(totalSeconds) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${String(minutes).padStart(2, "0")}:${String(
+    seconds
+  ).padStart(2, "0")}`;
+}
+
 export default function FocusPage() {
   const { studyId } = useParams();
 
@@ -18,6 +27,9 @@ export default function FocusPage() {
   const [result, setResult] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [remainingSeconds, setRemainingSeconds] = useState(null);
+  const [isRunning, setIsRunning] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
 
   const loadFocusPage = async () => {
     try {
@@ -57,6 +69,8 @@ export default function FocusPage() {
       });
 
       setResult(response.data);
+      setRemainingSeconds(null);
+      setIsCompleted(false);
 
       toast.success(`${response.data.pointDelta}포인트를 획득했습니다!`);
     } catch (error) {
@@ -69,9 +83,68 @@ export default function FocusPage() {
     }
   };
 
+  const handleStartTimer = () => {
+    const minutes = Number(targetMinutes);
+
+    if (!Number.isFinite(minutes) || minutes <= 0) {
+      toast.error("목표 시간을 입력해주세요.");
+      return;
+    }
+
+    setRemainingSeconds(minutesToSeconds(minutes));
+    setIsRunning(true);
+    setIsCompleted(false);
+    setResult(null);
+  };
+
+  const handlePauseTimer = () => {
+    setIsRunning(false);
+  };
+
+  const handleResumeTimer = () => {
+    setIsRunning(true);
+  };
+
+  const handleStopTimer = () => {
+    const confirmed = window.confirm("집중을 중단하시겠습니까?");
+
+    if (!confirmed) return;
+
+    setRemainingSeconds(null);
+    setIsRunning(false);
+    setIsCompleted(false);
+  };
+
   useEffect(() => {
     loadFocusPage();
   }, [studyId]);
+
+  useEffect(() => {
+    if (!isRunning) return;
+
+    const intervalId = setInterval(() => {
+      setRemainingSeconds((prev) => {
+        if (prev <= 1) {
+          clearInterval(intervalId);
+
+          setIsRunning(false);
+          setIsCompleted(true);
+
+          return 0;
+        }
+
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [isRunning]);
+
+  useEffect(() => {
+    if (!isCompleted) return;
+
+    handleCompleteFocus();
+  }, [isCompleted]);
 
   if (isLoading) {
     return (
@@ -118,18 +191,52 @@ export default function FocusPage() {
             value={targetMinutes}
             onChange={(event) => setTargetMinutes(event.target.value)}
             placeholder="예: 30"
+            disabled={remainingSeconds !== null}
           />
+
+          {remainingSeconds !== null && (
+            <div className="mt-8 text-center">
+              <p className="text-5xl font-mono font-extrabold text-[#578246] tracking-wider">
+                {formatTime(remainingSeconds)}
+              </p>
+            </div>
+          )}
         </div>
 
-        <Button
-          fullWidth
-          size="lg"
-          className="mt-6"
-          onClick={handleCompleteFocus}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? "저장 중..." : "집중 완료 처리"}
-        </Button>
+        <div className="mt-6 flex flex-wrap gap-3">
+          {!isRunning && remainingSeconds === null && (
+            <Button fullWidth size="lg" onClick={handleStartTimer}>
+              집중 시작
+            </Button>
+          )}
+
+          {isRunning && (
+            <Button variant="secondary" onClick={handlePauseTimer}>
+              일시정지
+            </Button>
+          )}
+
+          {!isRunning &&
+            remainingSeconds !== null &&
+            remainingSeconds > 0 && (
+              <Button variant="secondary" onClick={handleResumeTimer}>
+                재개
+              </Button>
+            )}
+
+          {remainingSeconds !== null &&
+            remainingSeconds > 0 && (
+              <Button variant="danger" onClick={handleStopTimer}>
+                중단
+              </Button>
+            )}
+        </div>
+
+        {isSubmitting && (
+          <p className="mt-4 text-sm font-semibold text-[#578246] animate-pulse">
+            🚀 집중 완주 성공! 기록을 저장하는 중입니다...
+          </p>
+        )}
 
         {result && (
           <div className="mt-8 rounded-2xl bg-[#F6F4EF] p-5 text-left">
