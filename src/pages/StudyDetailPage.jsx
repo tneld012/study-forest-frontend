@@ -31,11 +31,16 @@ export default function StudyDetailPage() {
 
     try {
       setIsMembershipLoading(true);
+
       const response = await getMyStudyMembership(studyId);
+
+      console.log("멤버십 응답:", response.data);
+
       setMembership(response.data);
-    } catch {
+    } catch (error) {
+      console.error("멤버십 조회 실패:", error.response?.data || error);
       setMembership(null);
-    } {
+    } finally {
       setIsMembershipLoading(false);
     }
   };
@@ -76,7 +81,7 @@ export default function StudyDetailPage() {
       setIsMembershipSubmitting(true);
       await joinStudy(studyId);
       toast.success("스터디에 참여했습니다!");
-      await loadMyMembership(); // ➡️ 참여 성공했으니 멤버십 주머니 업데이트!
+      await loadMyMembership();
     } catch (error) {
       const message =
         error.response?.data?.message || "스터디 참여 중 오류가 발생했습니다.";

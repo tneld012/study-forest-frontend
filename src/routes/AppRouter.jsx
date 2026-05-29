@@ -9,6 +9,7 @@ import ResetPasswordPage from "../pages/ResetPasswordPage.jsx";
 import MyPage from "../pages/MyPage.jsx";
 import StudyDetailPage from "../pages/StudyDetailPage.jsx";
 import CreateStudyPage from "../pages/CreateStudyPage.jsx";
+import EditStudyPage from "../pages/EditStudyPage.jsx";
 
 
 export default function AppRouter() {
@@ -25,6 +26,7 @@ export default function AppRouter() {
         <Route element={<ProtectedRoute />}>
           <Route path="/mypage" element={<MyPage />} />
           <Route path="/studies/new" element={<CreateStudyPage />} />
+          <Route path="/studies/:studyId/edit" element={<EditStudyPage />} />
         </Route>
       </Route>
     </Routes>

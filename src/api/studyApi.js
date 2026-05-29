@@ -37,3 +37,15 @@ export async function createStudy({ name, introduce, backgroundKey, isPublic }) 
 
   return response.data;
 }
+
+// 📘 스터디 수정
+export async function updateStudy(studyId, { name, introduce, backgroundKey, isPublic }) {
+  const response = await apiClient.patch(`/studies/${studyId}`, {
+    name,
+    introduce,
+    backgroundKey,
+    isPublic,
+  });
+
+  return response.data;
+}

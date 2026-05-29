@@ -1,9 +1,9 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import Button from "../components/common/Button";
 import Input from "../components/common/Input";
-import { createStudy } from "../api/studyApi";
+import { getStudyDetail, updateStudy } from "../api/studyApi";
 
 import workspace1 from "../assets/studyCard/workspace_1.svg";
 import workspace2 from "../assets/studyCard/workspace_2.svg";
@@ -21,7 +21,8 @@ const BACKGROUND_OPTIONS = [
   { value: "leaf", label: "리프", image: leafImg },
 ];
 
-export default function CreateStudyPage() {
+export default function EditStudyPage() {
+  const { studyId } = useParams();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -31,6 +32,7 @@ export default function CreateStudyPage() {
     isPublic: true,
   });
 
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const updateField = (fieldName, value) => {
@@ -62,6 +64,33 @@ export default function CreateStudyPage() {
     form.introduce.trim().length <= 200 &&
     form.backgroundKey;
 
+  const loadStudy = async () => {
+    try {
+      setIsLoading(true);
+
+      const response = await getStudyDetail(studyId);
+      const study = response.data;
+
+      setForm({
+        name: study.name,
+        introduce: study.introduce,
+        backgroundKey: study.backgroundKey,
+        isPublic: study.isPublic,
+      });
+    } catch (error) {
+      const message =
+        error.response?.data?.message || "스터디 정보를 불러오지 못했습니다.";
+
+      toast.error(message, {
+        toastId: `edit-study-load-error-${studyId}`,
+      });
+
+      navigate(`/studies/${studyId}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
 
@@ -70,18 +99,18 @@ export default function CreateStudyPage() {
     try {
       setIsSubmitting(true);
 
-      const response = await createStudy({
+      await updateStudy(studyId, {
         name: form.name.trim(),
         introduce: form.introduce.trim(),
         backgroundKey: form.backgroundKey,
         isPublic: form.isPublic,
       });
 
-      toast.success("스터디가 생성되었습니다!");
-      navigate(`/studies/${response.data.studyId}`);
+      toast.success("스터디 정보가 수정되었습니다!");
+      navigate(`/studies/${studyId}`);
     } catch (error) {
       const message =
-        error.response?.data?.message || "스터디 생성 중 오류가 발생했습니다.";
+        error.response?.data?.message || "스터디 수정 중 오류가 발생했습니다.";
 
       toast.error(message);
     } finally {
@@ -89,11 +118,23 @@ export default function CreateStudyPage() {
     }
   };
 
+  useEffect(() => {
+    loadStudy();
+  }, [studyId]);
+
+  if (isLoading) {
+    return (
+      <section className="rounded-3xl bg-white p-8 text-center text-gray-500 shadow-sm">
+        스터디 정보를 불러오는 중입니다...
+      </section>
+    );
+  }
+
   return (
     <section className="mx-auto max-w-2xl rounded-3xl bg-white p-8 shadow-sm">
-      <h1 className="text-2xl font-bold text-[#578246]">스터디 만들기</h1>
+      <h1 className="text-2xl font-bold text-[#578246]">스터디 수정</h1>
       <p className="mt-2 text-sm text-gray-600">
-        함께 공부할 스터디를 만들어보세요.
+        스터디 정보를 다시 정리해보세요.
       </p>
 
       <form className="mt-8 space-y-7" onSubmit={handleSubmit}>
@@ -162,9 +203,7 @@ export default function CreateStudyPage() {
                       <div className="absolute inset-0 bg-black/25" />
                     </>
                   ) : (
-                    <div
-                      className={`absolute inset-0 ${option.className}`}
-                    />
+                    <div className={`absolute inset-0 ${option.className}`} />
                   )}
 
                   <span className="relative z-10 block p-3 text-sm font-semibold text-white">
@@ -216,7 +255,7 @@ export default function CreateStudyPage() {
           size="lg"
           disabled={!isFormValid || isSubmitting}
         >
-          {isSubmitting ? "만드는 중..." : "만들기"}
+          {isSubmitting ? "수정 중..." : "수정 완료"}
         </Button>
       </form>
     </section>
