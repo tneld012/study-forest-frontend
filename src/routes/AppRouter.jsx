@@ -1,10 +1,12 @@
 import { Route, Routes } from "react-router-dom";
-import MainLayout from "../components/layout/MainLayout";
-import HomePage from "../pages/HomePage";
-import LoginPage from "../pages/LoginPage";
-import RegisterPage from "../pages/RegisterPage";
-import PasswordResetRequestPage from "../pages/PasswordResetRequestPage";
-import ResetPasswordPage from "../pages/ResetPasswordPage";
+import MainLayout from "../components/layout/MainLayout.jsx";
+import ProtectedRoute from "./ProtectedRoute.jsx";
+import HomePage from "../pages/HomePage.jsx";
+import LoginPage from "../pages/LoginPage.jsx";
+import RegisterPage from "../pages/RegisterPage.jsx";
+import PasswordResetRequestPage from "../pages/PasswordResetRequestPage.jsx";
+import ResetPasswordPage from "../pages/ResetPasswordPage.jsx";
+import MyPage from "../pages/MyPage.jsx";
 
 
 export default function AppRouter() {
@@ -16,6 +18,10 @@ export default function AppRouter() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/password-reset" element={<PasswordResetRequestPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+        <Route element={<ProtectedRoute />}>
+          <Route path="/mypage" element={<MyPage />} />
+        </Route>
       </Route>
     </Routes>
   );

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import Button from "../components/common/Button";
 import Input from "../components/common/Input";
@@ -15,6 +15,9 @@ export default function LoginPage() {
   const navigate = useNavigate();
 
   const { refreshMe } = useAuth();
+
+  const location = useLocation();
+  const from = location.state?.from?.pathname || "/";
 
   const [form, setForm] = useState({
     email: "",
@@ -60,7 +63,7 @@ export default function LoginPage() {
       await refreshMe();
 
       toast.success("로그인에 성공했습니다!");
-      navigate("/");
+      navigate(from, { replace: true });
     } catch (error) {
       const message =
         error.response?.data?.message ||
