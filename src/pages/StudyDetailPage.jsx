@@ -4,6 +4,12 @@ import { Emoji } from "emoji-picker-react";
 import { toast } from "react-toastify";
 import Button from "../components/common/Button.jsx";
 import { getStudyDetail } from "../api/studyApi.js";
+import { useAuth } from "../contexts/AuthContext.jsx";
+import {
+  getMyStudyMembership,
+  joinStudy,
+  leaveStudy,
+} from "../api/studyMemberApi.js";
 
 export default function StudyDetailPage() {
   const { studyId } = useParams();
@@ -11,12 +17,32 @@ export default function StudyDetailPage() {
   const [study, setStudy] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const { isLoggedIn } = useAuth();
+  const [membership, setMembership] = useState(null);
+  const [isMembershipLoading, setIsMembershipLoading] = useState(false);
+  const [isMembershipSubmitting, setIsMembershipSubmitting] = useState(false);
+
+  const loadMyMembership = async () => {
+    if (!isLoggedIn) {
+      setMembership(null);
+      return;
+    }
+
+    try {
+      setIsMembershipLoading(true);
+      const response = await getMyStudyMembership(studyId);
+      setMembership(response.data);
+    } catch {
+      setMembership(null);
+    } {
+      setIsMembershipLoading(false);
+    }
+  };
+
   const loadStudyDetail = async () => {
     try {
       setIsLoading(true);
-
       const response = await getStudyDetail(studyId);
-
       setStudy(response.data);
     } catch (error) {
       const message =
@@ -34,6 +60,49 @@ export default function StudyDetailPage() {
   useEffect(() => {
     loadStudyDetail();
   }, [studyId]);
+
+  useEffect(() => {
+    loadMyMembership();
+  }, [studyId, isLoggedIn]);
+
+  const handleJoinStudy = async () => {
+    if (!isLoggedIn) {
+      toast.info("로그인이 필요합니다.");
+      return;
+    }
+
+    try {
+      setIsMembershipSubmitting(true);
+      await joinStudy(studyId);
+      toast.success("스터디에 참여했습니다!");
+      await loadMyMembership(); // ➡️ 참여 성공했으니 멤버십 주머니 업데이트!
+    } catch (error) {
+      const message =
+        error.response?.data?.message || "스터디 참여 중 오류가 발생했습니다.";
+      toast.error(message);
+    } finally {
+      setIsMembershipSubmitting(false);
+    }
+  };
+
+  const handleLeaveStudy = async () => {
+    try {
+      setIsMembershipSubmitting(true);
+      await leaveStudy(studyId);
+      toast.success("스터디에서 탈퇴했습니다.");
+      await loadMyMembership();
+    } catch (error) {
+      const message =
+        error.response?.data?.message || "스터디 탈퇴 중 오류가 발생했습니다.";
+      toast.error(message);
+    } finally {
+      setIsMembershipSubmitting(false);
+    }
+  };
+
+  const isMember = Boolean(membership?.isMember);
+  const role = membership?.membership?.role;
+  const isOwner = role === "OWNER";
 
   if (isLoading) {
     return (
@@ -96,7 +165,32 @@ export default function StudyDetailPage() {
         )}
 
         <div className="mt-8 flex flex-wrap gap-3">
-          <Button>스터디 참여하기</Button>
+          {isMembershipLoading ? (
+            <Button disabled>멤버십 확인 중...</Button>
+          ) : isOwner ? (
+            <>
+              <Button disabled>OWNER</Button>
+              <Link to={`/studies/${study.studyId}/edit`}>
+                <Button variant="secondary">스터디 수정</Button>
+              </Link>
+              <Button variant="danger">스터디 삭제</Button>
+            </>
+          ) : isMember ? (
+            <>
+              <Button disabled>참여중</Button>
+              <Button
+                variant="secondary"
+                onClick={handleLeaveStudy}
+                disabled={isMembershipSubmitting}
+              >
+                {isMembershipSubmitting ? "처리 중..." : "스터디 탈퇴"}
+              </Button>
+            </>
+          ) : (
+            <Button onClick={handleJoinStudy} disabled={isMembershipSubmitting}>
+              {isMembershipSubmitting ? "참여 중..." : "스터디 참여하기"}
+            </Button>
+          )}
 
           <Link to={`/studies/${study.studyId}/habits`}>
             <Button variant="secondary">오늘의 습관</Button>
