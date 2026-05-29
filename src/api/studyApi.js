@@ -25,3 +25,15 @@ export async function getStudyDetail(studyId) {
 
   return response.data; // 스터디 상세 데이터 반환
 }
+
+// 📘 스터디 생성
+export async function createStudy({ name, introduce, backgroundKey, isPublic }) {
+  const response = await apiClient.post("/studies", {
+    name,
+    introduce,
+    backgroundKey,
+    isPublic,
+  });
+
+  return response.data;
+}
