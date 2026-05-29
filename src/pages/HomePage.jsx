@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getStudyList } from "../api/studyApi.js";
+import StudyCard from "../components/study/StudyCard.jsx";
 
 const PAGE_SIZE = 6;
 
@@ -102,39 +103,7 @@ export default function HomePage() {
         <>
           <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {studies.map((study) => (
-              <article
-                key={study.studyId}
-                className="rounded-3xl bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
-              >
-                <p className="text-sm font-semibold text-[#578246]">
-                  {study.totalPoints}P
-                </p>
-
-                <h2 className="mt-3 text-xl font-bold text-gray-900">
-                  {study.name}
-                </h2>
-
-                <p className="mt-2 line-clamp-2 text-sm text-gray-600">
-                  {study.introduce}
-                </p>
-
-                <div className="mt-5 flex gap-2">
-                  {study.topEmojis?.length > 0 ? (
-                    study.topEmojis.map((emoji) => (
-                      <span
-                        key={emoji.emojiUnifiedCode}
-                        className="rounded-full bg-[#F6F4EF] px-3 py-1 text-sm"
-                      >
-                        {emoji.emojiUnifiedCode} {emoji.count}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-sm text-gray-400">
-                      아직 이모지가 없어요
-                    </span>
-                  )}
-                </div>
-              </article>
+              <StudyCard key={study.studyId} study={study} />
             ))}
           </div>
 
