@@ -24,7 +24,15 @@ export default function HabitsPage() {
       ]);
 
       setStudy(studyResponse.data);
-      setHabits(habitsResponse.data.habits);
+
+      const nextHabits = habitsResponse.data.habits;
+
+        setHabits(nextHabits);
+        setCheckedHabitIds(
+          nextHabits
+            .filter((habit) => habit.isCheckedToday)
+            .map((habit) => habit.habitId)
+        );
     } catch (error) {
       const message =
         error.response?.data?.message || "오늘의 습관을 불러오지 못했습니다.";
