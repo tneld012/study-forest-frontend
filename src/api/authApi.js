@@ -1,4 +1,4 @@
-import apiClient from "./client";
+import apiClient from "./client.js";
 
 // 🔐 회원가입 요청
 export async function register({ email, nickname, password }) {

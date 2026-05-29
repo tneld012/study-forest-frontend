@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
-import Button from "../components/common/Button";
-import Input from "../components/common/Input";
-import { requestPasswordReset } from "../api/authApi";
+import Button from "../components/common/Button.jsx";
+import Input from "../components/common/Input.jsx";
+import { requestPasswordReset } from "../api/authApi.js";
 
 // 🔬 이메일 형식 유효성 검사 유틸 함수
 function validateEmail(email) {

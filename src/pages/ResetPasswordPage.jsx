@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
-import Button from "../components/common/Button";
-import Input from "../components/common/Input";
-import { resetPassword } from "../api/authApi";
+import Button from "../components/common/Button.jsx";
+import Input from "../components/common/Input.jsx";
+import { resetPassword } from "../api/authApi.js";
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
