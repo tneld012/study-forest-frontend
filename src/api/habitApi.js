@@ -6,3 +6,21 @@ export async function getHabits(studyId) {
 
   return response.data;
 }
+
+// 🗓️ 습관 체크
+export async function checkHabit(studyId, habitId) {
+  const response = await apiClient.post(
+    `/studies/${studyId}/habits/${habitId}/check`
+  );
+
+  return response.data;
+}
+
+// 🗓️ 습관 체크 해제
+export async function uncheckHabit(studyId, habitId) {
+  const response = await apiClient.delete(
+    `/studies/${studyId}/habits/${habitId}/check`
+  );
+
+  return response.data;
+}

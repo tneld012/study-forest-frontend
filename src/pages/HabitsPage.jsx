@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import Button from "../components/common/Button.jsx";
-import { getHabits } from "../api/habitApi.js";
+import { checkHabit, getHabits, uncheckHabit } from "../api/habitApi.js";
 import { getStudyDetail } from "../api/studyApi.js";
 
 export default function HabitsPage() {
@@ -11,6 +11,8 @@ export default function HabitsPage() {
   const [study, setStudy] = useState(null);
   const [habits, setHabits] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [checkedHabitIds, setCheckedHabitIds] = useState([]);
+  const [submittingHabitId, setSubmittingHabitId] = useState(null);
 
   const loadHabitsPage = async () => {
     try {
@@ -32,6 +34,33 @@ export default function HabitsPage() {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleToggleHabit = async (habitId) => {
+    const isChecked = checkedHabitIds.includes(habitId);
+
+    try {
+      setSubmittingHabitId(habitId);
+
+      if (isChecked) {
+        await uncheckHabit(studyId, habitId);
+
+        setCheckedHabitIds((prev) => prev.filter((id) => id !== habitId));
+        toast.success("습관 체크를 해제했습니다.");
+      } else {
+        await checkHabit(studyId, habitId);
+
+        setCheckedHabitIds((prev) => [...prev, habitId]);
+        toast.success("습관을 체크했습니다!");
+      }
+    } catch (error) {
+      const message =
+        error.response?.data?.message || "습관 체크 처리 중 오류가 발생했습니다.";
+
+      toast.error(message);
+    } finally {
+      setSubmittingHabitId(null);
     }
   };
 
@@ -77,26 +106,45 @@ export default function HabitsPage() {
           <Button variant="secondary">목록 수정</Button>
         </div>
 
-        {habits.length === 0 ? (
-          <p className="mt-8 rounded-2xl bg-[#F6F4EF] p-8 text-center text-gray-500">
-            아직 습관이 없어요. 목록 수정을 눌러 습관을 생성해보세요.
-          </p>
-        ) : (
-          <ul className="mt-8 space-y-3">
-            {habits.map((habit) => (
-              <li
-                key={habit.habitId}
-                className="flex items-center justify-between rounded-2xl border border-[#E5E2DA] bg-[#F6F4EF] px-5 py-4"
-              >
-                <span className="font-semibold text-gray-800">
-                  {habit.name}
-                </span>
+        {habits.map((habit) => {
+          const isChecked = checkedHabitIds.includes(habit.habitId);
+          const isSubmitting = submittingHabitId === habit.habitId;
 
-                <span className="text-sm text-gray-400">체크 준비중</span>
-              </li>
-            ))}
-          </ul>
-        )}
+          return (
+            <li
+              key={habit.habitId}
+              className={[
+                "flex items-center justify-between rounded-2xl border px-5 py-4 transition",
+                isChecked
+                  ? "border-[#99C08E] bg-[#E7F3E7]"
+                  : "border-[#E5E2DA] bg-[#F6F4EF]",
+              ].join(" ")}
+            >
+              <span
+                className={[
+                  "font-semibold",
+                  isChecked ? "text-[#578246]" : "text-gray-800",
+                ].join(" ")}
+              >
+                {habit.name}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => handleToggleHabit(habit.habitId)}
+                disabled={isSubmitting}
+                className={[
+                  "rounded-full px-4 py-2 text-sm font-semibold transition disabled:opacity-50",
+                  isChecked
+                    ? "bg-[#578246] text-white"
+                    : "bg-white text-gray-500 hover:text-[#578246]",
+                ].join(" ")}
+              >
+                {isSubmitting ? "처리 중..." : isChecked ? "완료" : "체크"}
+              </button>
+            </li>
+          );
+        })}
       </div>
     </section>
   );
