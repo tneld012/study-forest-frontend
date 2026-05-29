@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { Emoji } from "emoji-picker-react";
 import { toast } from "react-toastify";
 import Button from "../components/common/Button.jsx";
@@ -13,6 +13,7 @@ import {
 
 export default function StudyDetailPage() {
   const { studyId } = useParams();
+  const navigate = useNavigate();
 
   const [study, setStudy] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -98,6 +99,27 @@ export default function StudyDetailPage() {
     } finally {
       setIsMembershipSubmitting(false);
     }
+  };
+
+  const handleGoToMemberOnlyPage = (path) => {
+    if (!isLoggedIn) {
+      toast.info("로그인이 필요합니다.");
+      navigate("/login", {
+        state: {
+          from: {
+            pathname: path,
+          },
+        },
+      });
+      return;
+    }
+
+    if (!isMember) {
+      toast.info("스터디에 참여한 멤버만 이용할 수 있습니다.");
+      return;
+    }
+
+    navigate(path);
   };
 
   const isMember = Boolean(membership?.isMember);
@@ -192,13 +214,23 @@ export default function StudyDetailPage() {
             </Button>
           )}
 
-          <Link to={`/studies/${study.studyId}/habits`}>
-            <Button variant="secondary">오늘의 습관</Button>
-          </Link>
+          <Button
+            variant="secondary"
+            onClick={() =>
+              handleGoToMemberOnlyPage(`/studies/${study.studyId}/habits`)
+            }
+          >
+            오늘의 습관
+          </Button>
 
-          <Link to={`/studies/${study.studyId}/focus`}>
-            <Button variant="secondary">오늘의 집중</Button>
-          </Link>
+          <Button
+            variant="secondary"
+            onClick={() =>
+              handleGoToMemberOnlyPage(`/studies/${study.studyId}/focus`)
+            }
+          >
+            오늘의 집중
+          </Button>
 
           <Button variant="ghost">공유하기</Button>
         </div>
