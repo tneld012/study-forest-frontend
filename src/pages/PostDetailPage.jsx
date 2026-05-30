@@ -1,8 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
+import { FaThumbsUp, FaRegThumbsUp } from "react-icons/fa";
 import Button from "../components/common/Button.jsx";
-import { deletePost, getPostDetail } from "../api/postApi.js";
+import {
+  deletePost,
+  getPostDetail,
+  likePost,
+  unlikePost,
+} from "../api/postApi.js";
 import { useAuth } from "../contexts/AuthContext.jsx";
 
 // =============================================================================
@@ -22,7 +28,11 @@ export default function PostDetailPage() {
   // 2. 삭제 처리 로딩 상태 관리
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // 현재 로그인한 유저가 게시글 작성자인지 여부 확인
+  // 3. 좋아요 상호작용 관련 상태 관리
+  const [isLiked, setIsLiked] = useState(false);
+  const [isLikeSubmitting, setIsLikeSubmitting] = useState(false);
+
+  // 파생 상태 연산: 현재 로그인한 유저가 게시글 작성자인지 여부 확인
   const isMine = user?.userId === post?.authorId;
 
   // =============================================================================
@@ -75,6 +85,50 @@ export default function PostDetailPage() {
       toast.error(message);
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  // 좋아요 / 좋아요 취소 토글 핸들러
+  const handleToggleLike = async () => {
+    // 비로그인 사용자가 접근 시 차단 및 알림
+    if (!isLoggedIn) {
+      toast.info("로그인이 필요합니다.");
+      return;
+    }
+
+    try {
+      setIsLikeSubmitting(true);
+
+      if (isLiked) {
+        // 이미 좋아요 상태라면 취소 API 호출
+        await unlikePost(postId);
+
+        setIsLiked(false);
+        setPost((prev) => ({
+          ...prev,
+          likeCount: Math.max((prev?.likeCount ?? 1) - 1, 0),
+        }));
+
+        toast.success("좋아요를 취소했습니다.");
+      } else {
+        // 좋아요 상태가 아니라면 등록 API 호출
+        await likePost(postId);
+
+        setIsLiked(true);
+        setPost((prev) => ({
+          ...prev,
+          likeCount: (prev?.likeCount ?? 0) + 1,
+        }));
+
+        toast.success("좋아요를 눌렀습니다.");
+      }
+    } catch (error) {
+      const message =
+        error.response?.data?.message || "좋아요 처리 중 오류가 발생했습니다.";
+
+      toast.error(message);
+    } finally {
+      setIsLikeSubmitting(false);
     }
   };
 
@@ -157,8 +211,21 @@ export default function PostDetailPage() {
 
         {/* 하단 반응 정보 및 로그인 권유 문구 */}
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <Button variant="secondary">
-            좋아요 {post.likeCount}
+          {/* 좋아요 토글 버튼 */}
+          <Button
+            variant={isLiked ? "primary" : "secondary"}
+            onClick={handleToggleLike}
+            disabled={isLikeSubmitting}
+            className="flex flex-row items-center justify-center gap-1.5"
+          >
+            {isLikeSubmitting ? (
+              "처리 중..."
+            ) : (
+              <>
+                {isLiked ? <FaThumbsUp /> : <FaRegThumbsUp />}
+                <span>{post.likeCount}</span>
+              </>
+            )}
           </Button>
 
           <span className="text-sm text-gray-500">

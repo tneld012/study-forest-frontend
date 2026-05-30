@@ -52,3 +52,17 @@ export async function updatePost(postId, { title, content }) {
 
   return response.data;
 }
+
+// 👨🏻‍👨🏻‍👦🏻 게시글 좋아요 추가
+export async function likePost(postId) {
+  const response = await apiClient.post(`/posts/${postId}/likes`);
+
+  return response.data;
+}
+
+// 👨🏻‍👨🏻‍👦🏻 게시글 좋아요 취소
+export async function unlikePost(postId) {
+  const response = await apiClient.delete(`/posts/${postId}/likes`);
+
+  return response.data;
+}
