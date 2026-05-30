@@ -10,6 +10,9 @@ import workspace2 from "../assets/studyCard/workspace_2.svg";
 import patternImg from "../assets/studyCard/pattern.svg";
 import leafImg from "../assets/studyCard/leaf.svg";
 
+// =============================================================================
+// 전역 설정 및 상수 구역
+// =============================================================================
 const BACKGROUND_OPTIONS = [
   { value: "green", label: "그린", className: "bg-[#E7F3E7]" },
   { value: "yellow", label: "옐로우", className: "bg-[#FFF3C4]" },
@@ -21,10 +24,14 @@ const BACKGROUND_OPTIONS = [
   { value: "leaf", label: "리프", image: leafImg },
 ];
 
+// =============================================================================
+// 메인 컴포넌트
+// =============================================================================
 export default function EditStudyPage() {
   const { studyId } = useParams();
   const navigate = useNavigate();
 
+  // 1. 폼 데이터 관련 상태 (기존 데이터 로드 후 초기화 예정)
   const [form, setForm] = useState({
     name: "",
     introduce: "",
@@ -32,9 +39,15 @@ export default function EditStudyPage() {
     isPublic: true,
   });
 
+  // 2. 초기 데이터 로딩 및 수정 제출 로딩 상태 관리
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // =============================================================================
+  // 내부 유틸리티 및 폼 핸들링 함수
+  // =============================================================================
+  
+  // 지정된 필드의 값을 업데이트하는 공통 함수
   const updateField = (fieldName, value) => {
     setForm((prev) => ({
       ...prev,
@@ -42,6 +55,7 @@ export default function EditStudyPage() {
     }));
   };
 
+  // 실시간 필드별 에러 메시지 검증
   const errors = {
     name:
       form.name.length > 0 && form.name.trim().length < 2
@@ -57,6 +71,7 @@ export default function EditStudyPage() {
           : "",
   };
 
+  // 전체 폼 유효성 검증 (버튼 비활성화 여부)
   const isFormValid =
     form.name.trim().length >= 2 &&
     form.name.trim().length <= 30 &&
@@ -64,6 +79,11 @@ export default function EditStudyPage() {
     form.introduce.trim().length <= 200 &&
     form.backgroundKey;
 
+  // =============================================================================
+  // 비동기 백엔드 API 통신 함수 구역
+  // =============================================================================
+  
+  // 기존 스터디 데이터 로드 및 폼 상태 동기화
   const loadStudy = async () => {
     try {
       setIsLoading(true);
@@ -85,15 +105,22 @@ export default function EditStudyPage() {
         toastId: `edit-study-load-error-${studyId}`,
       });
 
+      // 불러오기 실패 시 해당 스터디 상세 페이지로 리다이렉트
       navigate(`/studies/${studyId}`);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // =============================================================================
+  // 사용자 인터랙션 이벤트 핸들러 구역
+  // =============================================================================
+  
+  // 스터디 정보 수정 제출 핸들러
   const handleSubmit = async (event) => {
     event.preventDefault();
 
+    // 유효하지 않은 폼이거나 이미 제출 중인 경우 차단
     if (!isFormValid || isSubmitting) return;
 
     try {
@@ -107,6 +134,7 @@ export default function EditStudyPage() {
       });
 
       toast.success("스터디 정보가 수정되었습니다!");
+      // 수정 성공 후 변경된 스터디 상세 페이지로 이동
       navigate(`/studies/${studyId}`);
     } catch (error) {
       const message =
@@ -118,10 +146,18 @@ export default function EditStudyPage() {
     }
   };
 
+  // =============================================================================
+  // 라이프사이클 관리 (useEffect) 구역
+  // =============================================================================
+  
+  // 컴포넌트 마운트 시 및 URL 파라미터(studyId)가 변경될 때마다 기존 데이터 로드
   useEffect(() => {
     loadStudy();
   }, [studyId]);
 
+  // =============================================================================
+  // 데이터 미도달 예외 차단용 Early Return 구역
+  // =============================================================================
   if (isLoading) {
     return (
       <section className="rounded-3xl bg-white p-8 text-center text-gray-500 shadow-sm">
@@ -130,6 +166,9 @@ export default function EditStudyPage() {
     );
   }
 
+  // =============================================================================
+  // 메인 레이아웃 리턴 구역
+  // =============================================================================
   return (
     <section className="mx-auto max-w-2xl rounded-3xl bg-white p-8 shadow-sm">
       <h1 className="text-2xl font-bold text-[#578246]">스터디 수정</h1>
@@ -138,6 +177,7 @@ export default function EditStudyPage() {
       </p>
 
       <form className="mt-8 space-y-7" onSubmit={handleSubmit}>
+        {/* 스터디 이름 입력 필드 (공통 Input 컴포넌트 사용) */}
         <Input
           id="studyName"
           label="스터디 이름"
@@ -147,6 +187,7 @@ export default function EditStudyPage() {
           errorMessage={errors.name}
         />
 
+        {/* 스터디 소개 입력 필드 */}
         <div>
           <label
             htmlFor="introduce"
@@ -169,11 +210,13 @@ export default function EditStudyPage() {
             ].join(" ")}
           />
 
+          {/* 스터디 소개 에러 메시지 조건부 렌더링 */}
           {errors.introduce && (
             <p className="mt-2 text-sm text-[#D9534F]">{errors.introduce}</p>
           )}
         </div>
 
+        {/* 카드 배경 이미지 및 단색 컬러 선택 구역 */}
         <div>
           <p className="mb-3 text-sm font-semibold text-gray-800">배경 선택</p>
 
@@ -193,6 +236,7 @@ export default function EditStudyPage() {
                       : "border-transparent hover:border-[#99C08E]",
                   ].join(" ")}
                 >
+                  {/* asset 이미지가 존재하면 img 태그, 없으면 단색 배경 블록 렌더링 */}
                   {option.image ? (
                     <>
                       <img
@@ -215,6 +259,7 @@ export default function EditStudyPage() {
           </div>
         </div>
 
+        {/* 공개 / 비공개 토글 선택 구역 */}
         <div>
           <p className="mb-3 text-sm font-semibold text-gray-800">
             스터디 공개 여부
@@ -249,6 +294,7 @@ export default function EditStudyPage() {
           </div>
         </div>
 
+        {/* 수정 완료 제출 버튼 */}
         <Button
           type="submit"
           fullWidth

@@ -9,6 +9,12 @@ import {
   likePost,
   unlikePost,
 } from "../api/postApi.js";
+import {
+  createPostComment,
+  deletePostComment,
+  getPostComments,
+  updatePostComment,
+} from "../api/postCommentApi.js";
 import { useAuth } from "../contexts/AuthContext.jsx";
 
 // =============================================================================
@@ -32,7 +38,15 @@ export default function PostDetailPage() {
   const [isLiked, setIsLiked] = useState(false);
   const [isLikeSubmitting, setIsLikeSubmitting] = useState(false);
 
-  // 파생 상태 연산: 현재 로그인한 유저가 게시글 작성자인지 여부 확인
+  // 4. 댓글(Comments) CRUD 관련 상태 관리
+  const [comments, setComments] = useState([]);
+  const [commentContent, setCommentContent] = useState("");
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editingCommentContent, setEditingCommentContent] = useState("");
+  const [isCommentsLoading, setIsCommentsLoading] = useState(false);
+  const [isCommentSubmitting, setIsCommentSubmitting] = useState(false);
+
+  // 현재 로그인한 유저가 게시글 작성자인지 여부 확인
   const isMine = user?.userId === post?.authorId;
 
   // =============================================================================
@@ -57,6 +71,26 @@ export default function PostDetailPage() {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // 해당 게시글에 속한 전체 댓글 목록 조회
+  const loadComments = async () => {
+    try {
+      setIsCommentsLoading(true);
+
+      const response = await getPostComments(postId);
+
+      setComments(response.data.comments);
+    } catch (error) {
+      const message =
+        error.response?.data?.message || "댓글 목록을 불러오지 못했습니다.";
+
+      toast.error(message, {
+        toastId: `post-comments-error-${postId}`,
+      });
+    } finally {
+      setIsCommentsLoading(false);
     }
   };
 
@@ -133,6 +167,116 @@ export default function PostDetailPage() {
     }
   };
 
+  // 신규 댓글 신규 등록 핸들러
+  const handleCreateComment = async () => {
+    const trimmedContent = commentContent.trim();
+
+    // 비로그인 유저의 작성 시도 제한
+    if (!isLoggedIn) {
+      toast.info("로그인이 필요합니다.");
+      return;
+    }
+
+    // 빈 공백 내용 제출 차단
+    if (!trimmedContent) {
+      toast.error("댓글 내용을 입력해주세요.");
+      return;
+    }
+
+    try {
+      setIsCommentSubmitting(true);
+
+      await createPostComment(postId, {
+        content: trimmedContent,
+      });
+
+      toast.success("댓글이 작성되었습니다.");
+      setCommentContent("");
+      
+      // 갱신 목록 연동 및 게시글 데이터(댓글 수) 최신화 호출
+      await loadComments();
+      await loadPostDetail();
+    } catch (error) {
+      const message =
+        error.response?.data?.message || "댓글 작성 중 오류가 발생했습니다.";
+
+      toast.error(message);
+    } finally {
+      setIsCommentSubmitting(false);
+    }
+  };
+
+  // 특정 댓글의 인라인 수정 모드 활성화 헬퍼 함수
+  const handleStartEditComment = (comment) => {
+    setEditingCommentId(comment.commentId);
+    setEditingCommentContent(comment.content);
+  };
+
+  // 인라인 수정 모드 종료 및 버퍼 상태 초기화 헬퍼 함수
+  const handleCancelEditComment = () => {
+    setEditingCommentId(null);
+    setEditingCommentContent("");
+  };
+
+  // 기존 댓글 내용 업데이트 제출 핸들러
+  const handleUpdateComment = async (commentId) => {
+    const trimmedContent = editingCommentContent.trim();
+
+    // 공백만 입력된 빈 상태 업데이트 방지
+    if (!trimmedContent) {
+      toast.error("댓글 내용을 입력해주세요.");
+      return;
+    }
+
+    try {
+      setIsCommentSubmitting(true);
+
+      await updatePostComment(postId, commentId, {
+        content: trimmedContent,
+      });
+
+      toast.success("댓글이 수정되었습니다.");
+      setEditingCommentId(null);
+      setEditingCommentContent("");
+      
+      // 리스트 컴포넌트 갱신
+      await loadComments();
+    } catch (error) {
+      const message =
+        error.response?.data?.message || "댓글 수정 중 오류가 발생했습니다.";
+
+      toast.error(message);
+    } finally {
+      setIsCommentSubmitting(false);
+    }
+  };
+
+  // 댓글 삭제 프로세스 핸들러
+  const handleDeleteComment = async (commentId) => {
+    const isConfirmed = window.confirm("댓글을 삭제하시겠습니까?");
+
+    if (!isConfirmed) return;
+
+    try {
+      setIsCommentSubmitting(true);
+
+      await deletePostComment(postId, commentId);
+
+      toast.success("댓글이 삭제되었습니다.");
+      
+      // 삭제 후 댓글 리스트 및 메인 피드 데이터(댓글 수) 연동 동기화
+      await loadComments();
+      await loadPostDetail();
+    } catch (error) {
+      const message =
+        error.response?.data?.message || "댓글 삭제 중 오류가 발생했습니다.";
+
+      toast.error(message);
+    } finally {
+      setIsCommentSubmitting(false);
+    }
+  };
+
   // =============================================================================
   // 라이프사이클 관리 (useEffect) 구역
   // =============================================================================
@@ -140,6 +284,11 @@ export default function PostDetailPage() {
   // 컴포넌트 마운트 시 및 URL 파라미터(postId)가 변경될 때마다 디테일 데이터 로드
   useEffect(() => {
     loadPostDetail();
+  }, [postId]);
+
+  // 상단과 동일한 주기로 댓글 리스트도 별도 로드 관리
+  useEffect(() => {
+    loadComments();
   }, [postId]);
 
   // =============================================================================
@@ -241,12 +390,120 @@ export default function PostDetailPage() {
         </div>
       </div>
 
-      {/* 게시글 하단 댓글 구역 */}
+      {/* 게시글 하단 댓글 전체 레이아웃 구역 */}
       <div className="rounded-3xl bg-white p-8 shadow-sm">
         <h2 className="text-xl font-bold text-gray-900">댓글</h2>
-        <p className="mt-4 text-gray-500">
-          게시글 댓글은 다음 단계에서 연결할 예정입니다.
-        </p>
+
+        {/* 댓글 작성 폼 박스 */}
+        <div className="mt-6 rounded-2xl bg-[#F6F4EF] p-5">
+          <textarea
+            value={commentContent}
+            onChange={(event) => setCommentContent(event.target.value)}
+            placeholder={
+              isLoggedIn
+                ? "댓글을 작성해주세요"
+                : "로그인 후 댓글을 작성할 수 있어요"
+            }
+            disabled={!isLoggedIn || isCommentSubmitting}
+            className="min-h-24 w-full resize-none rounded-2xl border border-[#D9D6CE] bg-white px-4 py-3 text-sm outline-none focus:border-[#99C08E] disabled:bg-gray-100"
+          />
+
+          <div className="mt-3 flex justify-end">
+            <Button
+              onClick={handleCreateComment}
+              disabled={!isLoggedIn || isCommentSubmitting}
+            >
+              {isCommentSubmitting ? "작성 중..." : "댓글 작성"}
+            </Button>
+          </div>
+        </div>
+
+        {/* 조건부 렌더링: 로딩 중 / 데이터 없음 / 리스트 맵핑 */}
+        {isCommentsLoading ? (
+          <p className="mt-8 text-center text-gray-500">
+            댓글을 불러오는 중입니다...
+          </p>
+        ) : comments.length === 0 ? (
+          <p className="mt-8 rounded-2xl bg-[#F6F4EF] p-6 text-center text-gray-500">
+            아직 댓글이 없어요.
+          </p>
+        ) : (
+          <ul className="mt-8 space-y-4">
+            {comments.map((comment) => {
+              const isCommentMine = user?.userId === comment.authorId;
+              const isEditing = editingCommentId === comment.commentId;
+
+              return (
+                <li
+                  key={comment.commentId}
+                  className="rounded-2xl border border-[#E5E2DA] bg-white p-5"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="font-semibold text-gray-900">
+                        {comment.author?.nickname ?? "알 수 없음"}
+                      </p>
+                      <p className="mt-1 text-xs text-gray-400">
+                        {new Date(comment.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+
+                    {/* 작성자 본인 제어 핸들러 노출 설정 */}
+                    {isCommentMine && !isEditing && (
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleStartEditComment(comment)}
+                          className="text-sm font-semibold text-gray-500 hover:text-[#578246]"
+                        >
+                          수정
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteComment(comment.commentId)}
+                          className="text-sm font-semibold text-[#D9534F]"
+                        >
+                          삭제
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 인라인 에디팅 뷰와 텍스트 출력 컴포넌트 분기 조절 */}
+                  {isEditing ? (
+                    <div className="mt-4">
+                      <textarea
+                        value={editingCommentContent}
+                        onChange={(event) =>
+                          setEditingCommentContent(event.target.value)
+                        }
+                        className="min-h-24 w-full resize-none rounded-2xl border border-[#D9D6CE] bg-white px-4 py-3 text-sm outline-none focus:border-[#99C08E]"
+                      />
+
+                      <div className="mt-3 flex justify-end gap-2">
+                        <Button variant="ghost" onClick={handleCancelEditComment}>
+                          취소
+                        </Button>
+
+                        <Button
+                          onClick={() => handleUpdateComment(comment.commentId)}
+                          disabled={isCommentSubmitting}
+                        >
+                          저장
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="mt-4 whitespace-pre-wrap text-gray-700">
+                      {comment.content}
+                    </p>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
     </section>
   );
