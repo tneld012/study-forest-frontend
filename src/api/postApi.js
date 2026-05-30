@@ -28,3 +28,17 @@ export async function createPost({ title, content }) {
 
   return response.data;
 }
+
+// 👨🏻‍👨🏻‍👦🏻 게시글 상세 조회
+export async function getPostDetail(postId) {
+  const response = await apiClient.get(`/posts/${postId}`);
+
+  return response.data;
+}
+
+// 👨🏻‍👨🏻‍👦🏻 게시글 삭제
+export async function deletePost(postId) {
+  const response = await apiClient.delete(`/posts/${postId}`);
+
+  return response.data;
+}

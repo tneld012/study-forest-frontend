@@ -14,6 +14,7 @@ import HabitsPage from "../pages/HabitsPage.jsx";
 import FocusPage from "../pages/FocusPage.jsx";
 import CommunityPage from "../pages/CommunityPage.jsx";
 import CreatePostPage from "../pages/CreatePostPage.jsx";
+import PostDetailPage from "../pages/PostDetailPage.jsx";
 
 
 export default function AppRouter() {
@@ -27,6 +28,7 @@ export default function AppRouter() {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/studies/:studyId" element={<StudyDetailPage />} />
         <Route path="/community" element={<CommunityPage />} />
+        <Route path="/community/:postId" element={<PostDetailPage />} />
 
         <Route element={<ProtectedRoute />}>
           <Route path="/mypage" element={<MyPage />} />
