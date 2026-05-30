@@ -15,6 +15,7 @@ import FocusPage from "../pages/FocusPage.jsx";
 import CommunityPage from "../pages/CommunityPage.jsx";
 import CreatePostPage from "../pages/CreatePostPage.jsx";
 import PostDetailPage from "../pages/PostDetailPage.jsx";
+import EditPostPage from "../pages/EditPostPage.jsx";
 
 
 export default function AppRouter() {
@@ -37,6 +38,7 @@ export default function AppRouter() {
           <Route path="/studies/:studyId/habits" element={<HabitsPage />} />
           <Route path="/studies/:studyId/focus" element={<FocusPage />} />
           <Route path="/community/new" element={<CreatePostPage />} />
+          <Route path="/community/:postId/edit" element={<EditPostPage />} />
         </Route>
       </Route>
     </Routes>

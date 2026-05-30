@@ -10,6 +10,9 @@ import workspace2 from "../assets/studyCard/workspace_2.svg";
 import patternImg from "../assets/studyCard/pattern.svg";
 import leafImg from "../assets/studyCard/leaf.svg";
 
+// =============================================================================
+// 전역 설정 및 상수 구역
+// =============================================================================
 const BACKGROUND_OPTIONS = [
   { value: "green", label: "그린", className: "bg-[#E7F3E7]" },
   { value: "yellow", label: "옐로우", className: "bg-[#FFF3C4]" },
@@ -21,9 +24,13 @@ const BACKGROUND_OPTIONS = [
   { value: "leaf", label: "리프", image: leafImg },
 ];
 
+// =============================================================================
+// 메인 컴포넌트
+// =============================================================================
 export default function CreateStudyPage() {
   const navigate = useNavigate();
 
+  // 1. 폼 데이터 관련 상태
   const [form, setForm] = useState({
     name: "",
     introduce: "",
@@ -31,8 +38,14 @@ export default function CreateStudyPage() {
     isPublic: true,
   });
 
+  // 2. 제출 중 로딩 상태 관리
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // =============================================================================
+  // 내부 유틸리티 및 폼 핸들링 함수
+  // =============================================================================
+  
+  // 지정된 필드의 값을 업데이트하는 공통 함수
   const updateField = (fieldName, value) => {
     setForm((prev) => ({
       ...prev,
@@ -40,6 +53,7 @@ export default function CreateStudyPage() {
     }));
   };
 
+  // 실시간 필드별 에러 메시지 검증
   const errors = {
     name:
       form.name.length > 0 && form.name.trim().length < 2
@@ -55,6 +69,7 @@ export default function CreateStudyPage() {
           : "",
   };
 
+  // 버튼 활성화 여부를 위한 전체 폼 유효성 검증
   const isFormValid =
     form.name.trim().length >= 2 &&
     form.name.trim().length <= 30 &&
@@ -62,9 +77,15 @@ export default function CreateStudyPage() {
     form.introduce.trim().length <= 200 &&
     form.backgroundKey;
 
+  // =============================================================================
+  // 비동기 백엔드 API 통신 및 이벤트 핸들러 구역
+  // =============================================================================
+  
+  // 스터디 개설 제출 핸들러
   const handleSubmit = async (event) => {
     event.preventDefault();
 
+    // 유효하지 않은 폼이거나 이미 제출 중인 경우 차단
     if (!isFormValid || isSubmitting) return;
 
     try {
@@ -78,6 +99,7 @@ export default function CreateStudyPage() {
       });
 
       toast.success("스터디가 생성되었습니다!");
+      // 생성 성공 후 개설된 스터디 상세 페이지로 이동
       navigate(`/studies/${response.data.studyId}`);
     } catch (error) {
       const message =
@@ -89,6 +111,9 @@ export default function CreateStudyPage() {
     }
   };
 
+  // =============================================================================
+  // 메인 레이아웃 리턴 구역
+  // =============================================================================
   return (
     <section className="mx-auto max-w-2xl rounded-3xl bg-white p-8 shadow-sm">
       <h1 className="text-2xl font-bold text-[#578246]">스터디 만들기</h1>
@@ -97,6 +122,7 @@ export default function CreateStudyPage() {
       </p>
 
       <form className="mt-8 space-y-7" onSubmit={handleSubmit}>
+        {/* 스터디 이름 입력 필드 (공통 Input 컴포넌트 사용) */}
         <Input
           id="studyName"
           label="스터디 이름"
@@ -106,6 +132,7 @@ export default function CreateStudyPage() {
           errorMessage={errors.name}
         />
 
+        {/* 스터디 소개 입력 필드 */}
         <div>
           <label
             htmlFor="introduce"
@@ -128,11 +155,13 @@ export default function CreateStudyPage() {
             ].join(" ")}
           />
 
+          {/* 스터디 소개 에러 메시지 조건부 렌더링 */}
           {errors.introduce && (
             <p className="mt-2 text-sm text-[#D9534F]">{errors.introduce}</p>
           )}
         </div>
 
+        {/* 카드 배경 이미지 및 단색 컬러 선택 구역 */}
         <div>
           <p className="mb-3 text-sm font-semibold text-gray-800">배경 선택</p>
 
@@ -152,6 +181,7 @@ export default function CreateStudyPage() {
                       : "border-transparent hover:border-[#99C08E]",
                   ].join(" ")}
                 >
+                  {/* asset 이미지가 존재하면 img 태그, 없으면 단색 배경 블록 렌더링 */}
                   {option.image ? (
                     <>
                       <img
@@ -176,6 +206,7 @@ export default function CreateStudyPage() {
           </div>
         </div>
 
+        {/* 공개 / 비공개 토글 선택 구역 */}
         <div>
           <p className="mb-3 text-sm font-semibold text-gray-800">
             스터디 공개 여부
@@ -210,6 +241,7 @@ export default function CreateStudyPage() {
           </div>
         </div>
 
+        {/* 개설 완료 제출 버튼 */}
         <Button
           type="submit"
           fullWidth

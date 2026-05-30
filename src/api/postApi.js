@@ -42,3 +42,13 @@ export async function deletePost(postId) {
 
   return response.data;
 }
+
+// 👨🏻‍👨🏻‍👦🏻 게시글 수정
+export async function updatePost(postId, { title, content }) {
+  const response = await apiClient.patch(`/posts/${postId}`, {
+    title,
+    content,
+  });
+
+  return response.data;
+}
