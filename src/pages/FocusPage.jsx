@@ -21,6 +21,7 @@ function formatTime(totalSeconds) {
 
 export default function FocusPage() {
   const { studyId } = useParams();
+  const timerStorageKey = `focus-timer-${studyId}`;
 
   const [study, setStudy] = useState(null);
   const [targetMinutes, setTargetMinutes] = useState("30");
@@ -72,6 +73,7 @@ export default function FocusPage() {
       setRemainingSeconds(null);
       setIsCompleted(false);
 
+      localStorage.removeItem(timerStorageKey);
       toast.success(`${response.data.pointDelta}포인트를 획득했습니다!`);
     } catch (error) {
       const message =
@@ -91,10 +93,21 @@ export default function FocusPage() {
       return;
     }
 
-    setRemainingSeconds(minutesToSeconds(minutes));
+    const targetSeconds = minutesToSeconds(minutes);
+    const endsAt = Date.now() + targetSeconds * 1000;
+
+    localStorage.setItem(
+      timerStorageKey,
+      JSON.stringify({
+        targetMinutes: String(minutes),
+        targetSeconds,
+        endsAt,
+      })
+    );
+
+    setRemainingSeconds(targetSeconds);
     setIsRunning(true);
     setIsCompleted(false);
-    setResult(null);
   };
 
   const handlePauseTimer = () => {
@@ -110,6 +123,8 @@ export default function FocusPage() {
 
     if (!confirmed) return;
 
+    localStorage.removeItem(timerStorageKey);
+
     setRemainingSeconds(null);
     setIsRunning(false);
     setIsCompleted(false);
@@ -118,6 +133,32 @@ export default function FocusPage() {
   useEffect(() => {
     loadFocusPage();
   }, [studyId]);
+
+  useEffect(() => {
+    const savedTimer = localStorage.getItem(timerStorageKey);
+
+    if (!savedTimer) return;
+
+    try {
+      const parsedTimer = JSON.parse(savedTimer);
+      const secondsLeft = Math.max(
+        0,
+        Math.ceil((parsedTimer.endsAt - Date.now()) / 1000)
+      );
+
+      if (secondsLeft <= 0) {
+        localStorage.removeItem(timerStorageKey);
+        return;
+      }
+
+      setTargetMinutes(parsedTimer.targetMinutes);
+      setRemainingSeconds(secondsLeft);
+      setIsRunning(true);
+      setIsCompleted(false);
+    } catch {
+      localStorage.removeItem(timerStorageKey);
+    }
+  }, [timerStorageKey]);
 
   useEffect(() => {
     if (!isRunning) return;

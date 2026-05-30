@@ -10,6 +10,30 @@ import {
   joinStudy,
   leaveStudy,
 } from "../api/studyMemberApi.js";
+import { getWeeklyHabitRecords } from "../api/habitApi.js";
+
+function formatDateOnly(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function getMonday(date = new Date()) {
+  const copiedDate = new Date(date);
+  const day = copiedDate.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+
+  copiedDate.setDate(copiedDate.getDate() + diff);
+  copiedDate.setHours(0, 0, 0, 0);
+
+  return copiedDate;
+}
+
+function addDays(date, days) {
+  const copiedDate = new Date(date);
+  copiedDate.setDate(copiedDate.getDate() + days);
+  return copiedDate;
+}
+
+const WEEK_DAYS = ["월", "화", "수", "목", "금", "토", "일"];
 
 export default function StudyDetailPage() {
   const { studyId } = useParams();
@@ -23,6 +47,13 @@ export default function StudyDetailPage() {
   const [isMembershipLoading, setIsMembershipLoading] = useState(false);
   const [isMembershipSubmitting, setIsMembershipSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [weeklyRecords, setWeeklyRecords] = useState(null);
+  const [weekStartDate, setWeekStartDate] = useState(formatDateOnly(getMonday()));
+  const [isWeeklyRecordsLoading, setIsWeeklyRecordsLoading] = useState(false);
+
+  const isMember = Boolean(membership?.isMember);
+  const role = membership?.membership?.role;
+  const isOwner = role === "OWNER";
 
   const loadMyMembership = async () => {
     if (!isLoggedIn) {
@@ -32,14 +63,9 @@ export default function StudyDetailPage() {
 
     try {
       setIsMembershipLoading(true);
-
       const response = await getMyStudyMembership(studyId);
-
-      console.log("멤버십 응답:", response.data);
-
       setMembership(response.data);
     } catch (error) {
-      console.error("멤버십 조회 실패:", error.response?.data || error);
       setMembership(null);
     } finally {
       setIsMembershipLoading(false);
@@ -64,6 +90,30 @@ export default function StudyDetailPage() {
     }
   };
 
+  const loadWeeklyHabitRecords = async () => {
+    if (!isLoggedIn || !isMember) {
+      setWeeklyRecords(null);
+      return;
+    }
+
+    try {
+      setIsWeeklyRecordsLoading(true);
+      const response = await getWeeklyHabitRecords(studyId, {
+        startDate: weekStartDate,
+      });
+      setWeeklyRecords(response.data);
+    } catch (error) {
+      const message =
+        error.response?.data?.message || "습관 기록표를 불러오지 못했습니다.";
+
+      toast.error(message, {
+        toastId: `weekly-records-error-${studyId}`,
+      });
+    } finally {
+      setIsWeeklyRecordsLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadStudyDetail();
   }, [studyId]);
@@ -71,6 +121,10 @@ export default function StudyDetailPage() {
   useEffect(() => {
     loadMyMembership();
   }, [studyId, isLoggedIn]);
+
+  useEffect(() => {
+    loadWeeklyHabitRecords();
+  }, [studyId, weekStartDate, isLoggedIn, isMember]);
 
   const handleJoinStudy = async () => {
     if (!isLoggedIn) {
@@ -116,15 +170,12 @@ export default function StudyDetailPage() {
 
     try {
       setIsDeleting(true);
-
       await deleteStudy(studyId);
-
       toast.success("스터디가 삭제되었습니다.");
       navigate("/");
     } catch (error) {
       const message =
         error.response?.data?.message || "스터디 삭제 중 오류가 발생했습니다.";
-
       toast.error(message);
     } finally {
       setIsDeleting(false);
@@ -152,9 +203,13 @@ export default function StudyDetailPage() {
     navigate(path);
   };
 
-  const isMember = Boolean(membership?.isMember);
-  const role = membership?.membership?.role;
-  const isOwner = role === "OWNER";
+  const handlePreviousWeek = () => {
+    setWeekStartDate((prev) => formatDateOnly(addDays(new Date(prev), -7)));
+  };
+
+  const handleNextWeek = () => {
+    setWeekStartDate((prev) => formatDateOnly(addDays(new Date(prev), 7)));
+  };
 
   if (isLoading) {
     return (
@@ -273,10 +328,105 @@ export default function StudyDetailPage() {
       </div>
 
       <div className="rounded-3xl bg-white p-8 shadow-sm">
-        <h2 className="text-xl font-bold text-gray-900">습관 기록표</h2>
-        <p className="mt-4 text-gray-500">
-          주간 습관 기록표는 다음 단계에서 연결할 예정입니다.
-        </p>
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">습관 기록표</h2>
+            <p className="mt-2 text-sm text-gray-500">
+              스터디 멤버들의 주간 습관 달성 현황입니다.
+            </p>
+          </div>
+
+          {isMember && (
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={handlePreviousWeek}>
+                이전 주
+              </Button>
+              <Button variant="secondary" onClick={handleNextWeek}>
+                다음 주
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {!isLoggedIn ? (
+          <p className="mt-8 rounded-2xl bg-[#F6F4EF] p-6 text-center text-gray-500">
+            로그인하면 습관 기록표를 확인할 수 있어요.
+          </p>
+        ) : !isMember ? (
+          <p className="mt-8 rounded-2xl bg-[#F6F4EF] p-6 text-center text-gray-500">
+            스터디에 참여한 멤버만 습관 기록표를 볼 수 있어요.
+          </p>
+        ) : isWeeklyRecordsLoading ? (
+          <p className="mt-8 rounded-2xl bg-[#F6F4EF] p-6 text-center text-gray-500">
+            습관 기록표를 불러오는 중입니다...
+          </p>
+        ) : !weeklyRecords || weeklyRecords.habits.length === 0 ? (
+          <p className="mt-8 rounded-2xl bg-[#F6F4EF] p-6 text-center text-gray-500">
+            아직 습관 기록이 없어요.
+          </p>
+        ) : (
+          <div className="mt-8 overflow-x-auto">
+            <table className="w-full min-w-[720px] border-separate border-spacing-y-2 text-sm">
+              <thead>
+                <tr>
+                  <th className="w-44 rounded-l-2xl bg-[#F6F4EF] px-4 py-3 text-left font-bold text-gray-700">
+                    습관
+                  </th>
+
+                  {WEEK_DAYS.map((day, index) => (
+                    <th
+                      key={day}
+                      className="bg-[#F6F4EF] px-4 py-3 text-center font-bold text-gray-700 last:rounded-r-2xl"
+                    >
+                      <div>{day}</div>
+                      <div className="mt-1 text-xs font-normal text-gray-400">
+                        {weeklyRecords.habits[0]?.records[index]?.date?.slice(5)}
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+
+              <tbody>
+                {weeklyRecords.habits.map((habit) => (
+                  <tr key={habit.habitId}>
+                    <td className="rounded-l-2xl bg-white px-4 py-4 font-semibold text-gray-800 shadow-sm">
+                      {habit.name}
+                    </td>
+
+                    {habit.records.map((record) => (
+                      <td
+                        key={record.date}
+                        className="bg-white px-4 py-4 text-center shadow-sm last:rounded-r-2xl"
+                      >
+                        <div
+                          className={[
+                            "mx-auto flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold",
+                            record.isCompleted
+                              ? "bg-[#578246] text-white"
+                              : record.doneCount > 0
+                                ? "bg-[#E7F3E7] text-[#578246]"
+                                : "bg-[#F6F4EF] text-gray-400",
+                          ].join(" ")}
+                        >
+                          {record.doneCount}/{record.totalMemberCount}
+                        </div>
+
+                        <p className="mt-1 text-xs text-gray-400">
+                          {record.completionRate}%
+                        </p>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <p className="mt-4 text-sm text-gray-500">
+              전체 멤버 수: {weeklyRecords.memberCount}명
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="rounded-3xl bg-white p-8 shadow-sm">

@@ -54,3 +54,17 @@ export async function endHabit(studyId, habitId) {
 
   return response.data;
 }
+
+// 🗓️ 주간 습관 기록표 조회
+export async function getWeeklyHabitRecords(studyId, { startDate }) {
+  const response = await apiClient.get(
+    `/studies/${studyId}/habits/weekly-records`,
+    {
+      params: {
+        startDate,
+      },
+    }
+  );
+
+  return response.data;
+}
