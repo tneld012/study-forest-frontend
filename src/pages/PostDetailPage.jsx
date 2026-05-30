@@ -47,6 +47,7 @@ export default function PostDetailPage() {
       const response = await getPostDetail(postId);
 
       setPost(response.data);
+      setIsLiked(response.data.isLiked);
     } catch (error) {
       const message =
         error.response?.data?.message || "게시글 상세 정보를 불러오지 못했습니다.";
