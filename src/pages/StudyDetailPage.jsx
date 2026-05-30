@@ -1,6 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Emoji } from "emoji-picker-react";
+import EmojiPicker, { Emoji } from "emoji-picker-react";
+import {
+  addStudyEmoji,
+  getStudyEmojis,
+} from "../api/studyEmojiApi.js";
 import { toast } from "react-toastify";
 import Button from "../components/common/Button.jsx";
 import { deleteStudy, getStudyDetail } from "../api/studyApi.js";
@@ -18,6 +22,9 @@ import {
   updateStudyComment,
 } from "../api/studyCommentApi.js";
 
+// =============================================================================
+// 유틸리티 함수
+// =============================================================================
 function formatDateOnly(date) {
   return date.toISOString().slice(0, 10);
 }
@@ -41,22 +48,35 @@ function addDays(date, days) {
 
 const WEEK_DAYS = ["월", "화", "수", "목", "금", "토", "일"];
 
+// =============================================================================
+// 메인 컴포넌트
+// =============================================================================
 export default function StudyDetailPage() {
   const { studyId } = useParams();
   const navigate = useNavigate();
 
+  // 1. 스터디 정보 관련 상태
   const [study, setStudy] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // 2. 인증 및 권한 멤버십 관련 상태
   const { user, isLoggedIn } = useAuth();
   const [membership, setMembership] = useState(null);
   const [isMembershipLoading, setIsMembershipLoading] = useState(false);
   const [isMembershipSubmitting, setIsMembershipSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // 3. 반영사항: 이모지 관련 상태 추가
+  const [emojis, setEmojis] = useState([]);
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [isEmojiSubmitting, setIsEmojiSubmitting] = useState(false);
+
+  // 4. 주간 습관 기록표 관련 상태
   const [weeklyRecords, setWeeklyRecords] = useState(null);
   const [weekStartDate, setWeekStartDate] = useState(formatDateOnly(getMonday()));
   const [isWeeklyRecordsLoading, setIsWeeklyRecordsLoading] = useState(false);
 
+  // 5. 댓글 인프라 관련 상태
   const [comments, setComments] = useState([]);
   const [commentContent, setCommentContent] = useState("");
   const [editingCommentId, setEditingCommentId] = useState(null);
@@ -64,10 +84,21 @@ export default function StudyDetailPage() {
   const [isCommentsLoading, setIsCommentsLoading] = useState(false);
   const [isCommentSubmitting, setIsCommentSubmitting] = useState(false);
 
+  const emojiPickerRef = useRef(null);
+
+  // 파생 상태 연산
   const isMember = Boolean(membership?.isMember);
   const role = membership?.membership?.role;
   const isOwner = role === "OWNER";
 
+  const visibleEmojis = emojis.slice(0, 3);
+  const hiddenEmojiCount = Math.max(emojis.length - 3, 0);
+
+  // =============================================================================
+  // 비동기 백엔드 API 통신 함수 구역
+  // =============================================================================
+  
+  // 멤버십 등급 조회
   const loadMyMembership = async () => {
     if (!isLoggedIn) {
       setMembership(null);
@@ -85,6 +116,7 @@ export default function StudyDetailPage() {
     }
   };
 
+  // 스터디 단건 디테일 조회
   const loadStudyDetail = async () => {
     try {
       setIsLoading(true);
@@ -103,6 +135,22 @@ export default function StudyDetailPage() {
     }
   };
 
+  // 반영사항: 이모지 목록 조회 함수 추가
+  const loadEmojis = async () => {
+    try {
+      const response = await getStudyEmojis(studyId);
+      setEmojis(response.data.emojis);
+    } catch (error) {
+      const message =
+        error.response?.data?.message || "이모지 목록을 불러오지 못했습니다.";
+
+      toast.error(message, {
+        toastId: `study-emojis-error-${studyId}`,
+      });
+    }
+  };
+
+  // 주간 습관 기록표 데이터 로드
   const loadWeeklyHabitRecords = async () => {
     if (!isLoggedIn || !isMember) {
       setWeeklyRecords(null);
@@ -127,6 +175,7 @@ export default function StudyDetailPage() {
     }
   };
 
+  // 댓글 리스트 로드
   const loadComments = async () => {
     try {
       setIsCommentsLoading(true);
@@ -144,6 +193,9 @@ export default function StudyDetailPage() {
     }
   };
 
+  // =============================================================================
+  // 라이프사이클 관리 (useEffect) 구역
+  // =============================================================================
   useEffect(() => {
     loadStudyDetail();
   }, [studyId]);
@@ -151,6 +203,11 @@ export default function StudyDetailPage() {
   useEffect(() => {
     loadMyMembership();
   }, [studyId, isLoggedIn]);
+
+  // 반영사항: 이모지 목록 조회용 useEffect 추가
+  useEffect(() => {
+    loadEmojis();
+  }, [studyId]);
 
   useEffect(() => {
     loadWeeklyHabitRecords();
@@ -160,6 +217,61 @@ export default function StudyDetailPage() {
     loadComments();
   }, [studyId]);
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        emojiPickerRef.current &&
+        !emojiPickerRef.current.contains(event.target)
+      ) {
+        setIsEmojiPickerOpen(false);
+      }
+    };
+
+    if (isEmojiPickerOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isEmojiPickerOpen]);
+
+  // =============================================================================
+  // 사용자 인터랙션 이벤트 핸들러 구역
+  // =============================================================================
+  
+  // 반영사항: 이모지 추가 클릭 피커 제어 핸들러 추가
+  const handleEmojiClick = async (emojiData) => {
+    if (!isLoggedIn) {
+      toast.info("로그인이 필요합니다.");
+      return;
+    }
+
+    if (!isMember) {
+      toast.info("스터디에 참여한 멤버만 이모지를 남길 수 있습니다.");
+      return;
+    }
+
+    try {
+      setIsEmojiSubmitting(true);
+
+      await addStudyEmoji(studyId, {
+        emojiUnifiedCode: emojiData.unified.toUpperCase(),
+      });
+
+      toast.success("이모지 반응을 남겼습니다.");
+
+      await loadEmojis();
+    } catch (error) {
+      const message =
+        error.response?.data?.message || "이모지 반응 중 오류가 발생했습니다.";
+      toast.error(message);
+    } finally {
+      setIsEmojiSubmitting(false);
+    }
+  };
+
+  // 스터디 가입
   const handleJoinStudy = async () => {
     if (!isLoggedIn) {
       toast.info("로그인이 필요합니다.");
@@ -180,6 +292,7 @@ export default function StudyDetailPage() {
     }
   };
 
+  // 스터디 탈퇴
   const handleLeaveStudy = async () => {
     try {
       setIsMembershipSubmitting(true);
@@ -195,6 +308,7 @@ export default function StudyDetailPage() {
     }
   };
 
+  // 스터디 방 폭파 (삭제)
   const handleDeleteStudy = async () => {
     const isConfirmed = window.confirm(
       "정말 이 스터디를 삭제하시겠습니까? 삭제 후에는 목록에서 보이지 않습니다."
@@ -216,6 +330,7 @@ export default function StudyDetailPage() {
     }
   };
 
+  // 등급 가드형 서브 메뉴 네비게이터
   const handleGoToMemberOnlyPage = (path) => {
     if (!isLoggedIn) {
       toast.info("로그인이 필요합니다.");
@@ -237,6 +352,7 @@ export default function StudyDetailPage() {
     navigate(path);
   };
 
+  // 습관 달성표 주차 변경 핸들러
   const handlePreviousWeek = () => {
     setWeekStartDate((prev) => formatDateOnly(addDays(new Date(prev), -7)));
   };
@@ -245,6 +361,7 @@ export default function StudyDetailPage() {
     setWeekStartDate((prev) => formatDateOnly(addDays(new Date(prev), 7)));
   };
 
+  // 댓글 생성
   const handleCreateComment = async () => {
     const trimmedContent = commentContent.trim();
 
@@ -280,6 +397,7 @@ export default function StudyDetailPage() {
     }
   };
 
+  // 댓글 수정 모드 진입/취소/완료 핸들러 세트
   const handleStartEditComment = (comment) => {
     setEditingCommentId(comment.commentId);
     setEditingCommentContent(comment.content);
@@ -316,6 +434,7 @@ export default function StudyDetailPage() {
     }
   };
 
+  // 댓글 삭제
   const handleDeleteComment = async (commentId) => {
     const isConfirmed = window.confirm("댓글을 삭제하시겠습니까?");
 
@@ -335,6 +454,9 @@ export default function StudyDetailPage() {
     }
   };
 
+  // =============================================================================
+  // 데이터 미도달 예외 차단용 Early Return 구역
+  // =============================================================================
   if (isLoading) {
     return (
       <section className="rounded-3xl bg-white p-8 text-center text-gray-500 shadow-sm">
@@ -351,6 +473,9 @@ export default function StudyDetailPage() {
     );
   }
 
+  // =============================================================================
+  // 메인 레이아웃 리턴 구역
+  // =============================================================================
   return (
     <section className="space-y-8">
       <div className="rounded-3xl bg-white p-8 shadow-sm">
@@ -377,23 +502,47 @@ export default function StudyDetailPage() {
           </div>
         </div>
 
-        {study.topEmojis?.length > 0 && (
-          <div className="mt-8 flex flex-wrap gap-2">
-            {study.topEmojis.map((emoji) => (
-              <span
-                key={emoji.emojiUnifiedCode}
-                className="inline-flex items-center gap-2 rounded-full bg-[#F6F4EF] px-4 py-2 text-sm font-semibold text-gray-700"
-              >
-                <Emoji
-                  unified={emoji.emojiUnifiedCode.toLowerCase()}
-                  size={18}
-                  emojiStyle="apple"
+        <div className="mt-8 flex flex-wrap items-center gap-2" ref={emojiPickerRef}>
+          {visibleEmojis.map((emoji) => (
+            <span
+              key={emoji.emojiUnifiedCode}
+              className="inline-flex items-center gap-2 rounded-full bg-[#F6F4EF] px-4 py-2 text-sm font-semibold text-gray-700"
+            >
+              <Emoji
+                unified={emoji.emojiUnifiedCode.toLowerCase()}
+                size={18}
+                emojiStyle="apple"
+              />
+              {emoji.count}
+            </span>
+          ))}
+
+          {hiddenEmojiCount > 0 && (
+            <span className="inline-flex items-center rounded-full bg-[#F6F4EF] px-4 py-2 text-sm font-semibold text-gray-500">
+              +{hiddenEmojiCount}
+            </span>
+          )}
+
+          <div className="relative">
+            <Button
+              variant="secondary"
+              onClick={() => setIsEmojiPickerOpen((prev) => !prev)}
+              disabled={isEmojiSubmitting}
+            >
+              이모지 추가
+            </Button>
+
+            {isEmojiPickerOpen && (
+              <div className="absolute left-0 top-12 z-50">
+                <EmojiPicker
+                  onEmojiClick={handleEmojiClick}
+                  width={320}
+                  height={400}
                 />
-                {emoji.count}
-              </span>
-            ))}
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
         <div className="mt-8 flex flex-wrap gap-3">
           {isMembershipLoading ? (
