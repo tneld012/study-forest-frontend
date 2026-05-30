@@ -9,6 +9,7 @@ import {
   getMyStudies,
   getMySummary,
 } from "../api/userApi.js";
+import EmptyState from "../components/common/EmptyState.jsx";
 
 // =============================================================================
 // 전역 일반 유틸리티 함수 구역
@@ -249,15 +250,11 @@ export default function MyPage() {
 
         {/* 내 스터디 Empty State */}
         {studies.length === 0 ? (
-          <div className="mt-6 rounded-2xl bg-[#F6F4EF] p-8 text-center">
-            <p className="text-gray-500">아직 참여 중인 스터디가 없어요.</p>
-            <Link
-              to="/studies/new"
-              className="mt-4 inline-block font-semibold text-[#578246]"
-            >
-              스터디 만들기 →
-            </Link>
-          </div>
+          <EmptyState
+            message="아직 참여 중인 스터디가 없어요."
+            actionText="스터디 만들기"
+            actionTo="/studies/new"
+          />
         ) : (
           <ul className="mt-6 space-y-3">
             {studies.map((study) => (
@@ -303,15 +300,11 @@ export default function MyPage() {
 
         {/* 내 게시글 Empty State */}
         {posts.length === 0 ? (
-          <div className="mt-6 rounded-2xl bg-[#F6F4EF] p-8 text-center">
-            <p className="text-gray-500">아직 작성한 게시글이 없어요.</p>
-            <Link
-              to="/community/new"
-              className="mt-4 inline-block font-semibold text-[#578246]"
-            >
-              첫 게시글 작성하기 →
-            </Link>
-          </div>
+          <EmptyState
+            message="아직 작성한 게시글이 없어요."
+            actionText="첫 게시글 작성하기"
+            actionTo="/community/new"
+          />
         ) : (
           <ul className="mt-6 space-y-3">
             {posts.map((post) => (
@@ -353,9 +346,7 @@ export default function MyPage() {
 
         {/* 내 댓글 Empty State */}
         {comments.length === 0 ? (
-          <div className="mt-6 rounded-2xl bg-[#F6F4EF] p-8 text-center text-gray-500">
-            아직 작성한 댓글이 없어요.
-          </div>
+          <EmptyState message="아직 작성한 댓글이 없어요." />
         ) : (
           <ul className="mt-6 space-y-3">
             {comments.map((comment) => {
@@ -389,9 +380,7 @@ export default function MyPage() {
 
         {/* 내 집중 기록 Empty State */}
         {focusSessions.length === 0 ? (
-          <div className="mt-6 rounded-2xl bg-[#F6F4EF] p-8 text-center text-gray-500">
-            아직 집중 기록이 없어요.
-          </div>
+          <EmptyState message="아직 집중 기록이 없어요." />
         ) : (
           <ul className="mt-6 space-y-3">
             {focusSessions.map((session) => (
