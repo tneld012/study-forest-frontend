@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
+import Button from "../components/common/Button.jsx";
 import {
   getMyComments,
   getMyFocusSessions,
@@ -32,6 +33,19 @@ export default function MyPage() {
   // 2. 통합 대시보드 데이터 동기 로딩 상태 관리
   const [isLoading, setIsLoading] = useState(true);
 
+  // 2-1. 마이페이지 항목별 페이지네이션(더보기) 현재 페이지 번호 상태 관리
+  const [studyPage, setStudyPage] = useState(1);
+  const [postPage, setPostPage] = useState(1);
+  const [focusPage, setFocusPage] = useState(1);
+
+  // 2-2. 다음 페이지가 남아있는지 여부 상태 관리 (true일 때만 더보기 버튼 노출)
+  const [hasNextStudyPage, setHasNextStudyPage] = useState(false);
+  const [hasNextPostPage, setHasNextPostPage] = useState(false);
+  const [hasNextFocusPage, setHasNextFocusPage] = useState(false);
+
+  // 2-3. 더보기 중복 클릭 방지를 위한 현재 로딩 중인 카테고리 타입 기록 상태
+  const [loadingMoreType, setLoadingMoreType] = useState(null);
+
   // =============================================================================
   // 비동기 백엔드 API 통신 함수 구역
   // =============================================================================
@@ -41,6 +55,7 @@ export default function MyPage() {
     try {
       setIsLoading(true);
 
+      // 각 리스트의 최초 1페이지 데이터를 10개씩 가져오도록 파라미터 지정 후 동시에 호출
       const [
         summaryResponse,
         studiesResponse,
@@ -49,10 +64,10 @@ export default function MyPage() {
         focusResponse,
       ] = await Promise.all([
         getMySummary(),
-        getMyStudies(),
-        getMyPosts(),
+        getMyStudies({ page: 1, pageSize: 10 }),
+        getMyPosts({ page: 1, pageSize: 10 }),
         getMyComments(),
-        getMyFocusSessions(),
+        getMyFocusSessions({ page: 1, pageSize: 10 }),
       ]);
 
       // 가져온 데이터를 각각의 상태(State)에 나누어 저장
@@ -61,6 +76,16 @@ export default function MyPage() {
       setPosts(postsResponse.data.posts);
       setComments(commentsResponse.data.comments);
       setFocusSessions(focusResponse.data.focusSessions);
+
+      // 첫 페이지 로드가 완료되었으므로 모든 페이지 번호를 1로 초기화
+      setStudyPage(1);
+      setPostPage(1);
+      setFocusPage(1);
+
+      // 백엔드 응답 데이터에서 다음 페이지가 있는지 확인하여 상태 저장
+      setHasNextStudyPage(studiesResponse.data.pagination.hasNextPage);
+      setHasNextPostPage(postsResponse.data.pagination.hasNextPage);
+      setHasNextFocusPage(focusResponse.data.pagination.hasNextPage);
     } catch (error) {
       const message =
         error.response?.data?.message || "마이페이지 정보를 불러오지 못했습니다.";
@@ -68,6 +93,88 @@ export default function MyPage() {
       toast.error(message);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // =============================================================================
+  // 더보기(추가 데이터 로드) 핸들러 함수 구역
+  // =============================================================================
+
+  // 내 스터디 목록 더보기 처리
+  const handleLoadMoreStudies = async () => {
+    try {
+      setLoadingMoreType("studies");
+
+      const nextPage = studyPage + 1;
+      const response = await getMyStudies({
+        page: nextPage,
+        pageSize: 10,
+      });
+
+      // 기존 목록 뒤에 새로 가져온 데이터를 덧붙여서 저장
+      setStudies((prev) => [...prev, ...response.data.studies]);
+      setStudyPage(nextPage);
+      setHasNextStudyPage(response.data.pagination.hasNextPage);
+    } catch (error) {
+      const message =
+        error.response?.data?.message || "내 스터디를 더 불러오지 못했습니다.";
+
+      toast.error(message);
+    } finally {
+      setLoadingMoreType(null);
+    }
+  };
+
+  // 내 게시글 목록 더보기 처리
+  const handleLoadMorePosts = async () => {
+    try {
+      setLoadingMoreType("posts");
+
+      const nextPage = postPage + 1;
+      const response = await getMyPosts({
+        page: nextPage,
+        pageSize: 10,
+      });
+
+      // 기존 목록 뒤에 새로 가져온 데이터를 덧붙여서 저장
+      setPosts((prev) => [...prev, ...response.data.posts]);
+      setPostPage(nextPage);
+      setHasNextPostPage(response.data.pagination.hasNextPage);
+    } catch (error) {
+      const message =
+        error.response?.data?.message || "내 게시글을 더 불러오지 못했습니다.";
+
+      toast.error(message);
+    } finally {
+      setLoadingMoreType(null);
+    }
+  };
+
+  // 내 집중 기록 목록 더보기 처리
+  const handleLoadMoreFocusSessions = async () => {
+    try {
+      setLoadingMoreType("focusSessions");
+
+      const nextPage = focusPage + 1;
+      const response = await getMyFocusSessions({
+        page: nextPage,
+        pageSize: 10,
+      });
+
+      // 기존 목록 뒤에 새로 가져온 데이터를 덧붙여서 저장
+      setFocusSessions((prev) => [
+        ...prev,
+        ...response.data.focusSessions,
+      ]);
+      setFocusPage(nextPage);
+      setHasNextFocusPage(response.data.pagination.hasNextPage);
+    } catch (error) {
+      const message =
+        error.response?.data?.message || "내 집중 기록을 더 불러오지 못했습니다.";
+
+      toast.error(message);
+    } finally {
+      setLoadingMoreType(null);
     }
   };
 
@@ -162,6 +269,19 @@ export default function MyPage() {
             </li>
           ))}
         </ul>
+
+        {/* 내 스터디 목록 더보기 버튼 */}
+        {hasNextStudyPage && (
+          <div className="mt-6 flex justify-center">
+            <Button
+              variant="secondary"
+              onClick={handleLoadMoreStudies}
+              disabled={loadingMoreType === "studies"}
+            >
+              {loadingMoreType === "studies" ? "불러오는 중..." : "스터디 더보기"}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* 내 커뮤니티 작성 게시글 리스트 구역 */}
@@ -186,6 +306,19 @@ export default function MyPage() {
             </li>
           ))}
         </ul>
+
+        {/* 내 게시글 목록 더보기 버튼 */}
+        {hasNextPostPage && (
+          <div className="mt-6 flex justify-center">
+            <Button
+              variant="secondary"
+              onClick={handleLoadMorePosts}
+              disabled={loadingMoreType === "posts"}
+            >
+              {loadingMoreType === "posts" ? "불러오는 중..." : "게시글 더보기"}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* 내 댓글 리스트 구역 */}
@@ -244,6 +377,21 @@ export default function MyPage() {
             </li>
           ))}
         </ul>
+
+        {/* 내 집중 기록 목록 더보기 버튼 */}
+        {hasNextFocusPage && (
+          <div className="mt-6 flex justify-center">
+            <Button
+              variant="secondary"
+              onClick={handleLoadMoreFocusSessions}
+              disabled={loadingMoreType === "focusSessions"}
+            >
+              {loadingMoreType === "focusSessions"
+                ? "불러오는 중..."
+                : "집중 기록 더보기"}
+            </Button>
+          </div>
+        )}
       </div>
     </section>
   );

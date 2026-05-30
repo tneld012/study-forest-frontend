@@ -12,36 +12,49 @@ import {
 } from "../api/habitApi.js";
 import { getStudyDetail } from "../api/studyApi.js";
 
+// =============================================================================
+// 메인 컴포넌트
+// =============================================================================
 export default function HabitsPage() {
   const { studyId } = useParams();
 
+  // 1. 스터디 및 습관 리스트 핵심 데이터 상태 관리
   const [study, setStudy] = useState(null);
   const [habits, setHabits] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-
+  
+  // 2. 사용자의 체크 여부 및 실시간 폼 입력 상태 관리
   const [checkedHabitIds, setCheckedHabitIds] = useState([]);
-  const [submittingHabitId, setSubmittingHabitId] = useState(null);
-
-  const [isEditingList, setIsEditingList] = useState(false);
   const [newHabitName, setNewHabitName] = useState("");
   const [editingHabitNames, setEditingHabitNames] = useState({});
+  
+  // 3. UI 토글 및 서버 제출 로딩 상태 관리
+  const [isLoading, setIsLoading] = useState(true);
+  const [isEditingList, setIsEditingList] = useState(false);
+  const [submittingHabitId, setSubmittingHabitId] = useState(null);
   const [submittingManagementId, setSubmittingManagementId] = useState(null);
 
+  // =============================================================================
+  // 비동기 백엔드 API 통신 함수 구역
+  // =============================================================================
+  
+  // 스터디 정보와 습관 목록을 동시에 한 번에 가져와서 상태에 세팅
   const loadHabitsPage = async () => {
     try {
       setIsLoading(true);
 
+      // 두 개의 API 데이터를 기다리지 않고 동시에 호출
       const [studyResponse, habitsResponse] = await Promise.all([
         getStudyDetail(studyId),
         getHabits(studyId),
       ]);
 
+      // 가져온 데이터를 각각의 상태(State)에 나누어 저장
       setStudy(studyResponse.data);
 
       const nextHabits = habitsResponse.data.habits;
-
       setHabits(nextHabits);
 
+      // 수정용 임시 텍스트 맵 생성 (객체 형태로 각 습관 이름 매핑)
       setEditingHabitNames(
         nextHabits.reduce((acc, habit) => {
           acc[habit.habitId] = habit.name;
@@ -49,6 +62,7 @@ export default function HabitsPage() {
         }, {})
       );
 
+      // 오늘 이미 체크 완료된 습관 ID들만 골라내어 체크 상태 리스트에 저장
       setCheckedHabitIds(
         nextHabits
           .filter((habit) => habit.isCheckedToday)
@@ -66,6 +80,7 @@ export default function HabitsPage() {
     }
   };
 
+  // 습관 체크 토글 처리 (체크하기 / 체크 해제하기)
   const handleToggleHabit = async (habitId) => {
     const isChecked = checkedHabitIds.includes(habitId);
 
@@ -73,13 +88,13 @@ export default function HabitsPage() {
       setSubmittingHabitId(habitId);
 
       if (isChecked) {
+        // 이미 체크되어 있다면 백엔드에 체크 해제 요청
         await uncheckHabit(studyId, habitId);
-
         setCheckedHabitIds((prev) => prev.filter((id) => id !== habitId));
         toast.success("습관 체크를 해제했습니다.");
       } else {
+        // 체크되어 있지 않다면 백엔드에 체크 추가 요청
         await checkHabit(studyId, habitId);
-
         setCheckedHabitIds((prev) => [...prev, habitId]);
         toast.success("습관을 체크했습니다!");
       }
@@ -93,9 +108,11 @@ export default function HabitsPage() {
     }
   };
 
+  // 새로운 습관 추가 제출 처리
   const handleCreateHabit = async () => {
     const trimmedName = newHabitName.trim();
 
+    // 공백만 입력되었을 경우 차단
     if (trimmedName.length < 1) {
       toast.error("습관 이름을 입력해주세요.");
       return;
@@ -110,6 +127,8 @@ export default function HabitsPage() {
 
       toast.success("습관이 추가되었습니다.");
       setNewHabitName("");
+      
+      // 목록 최신화를 위해 전체 다시 로드
       await loadHabitsPage();
     } catch (error) {
       const message =
@@ -121,9 +140,11 @@ export default function HabitsPage() {
     }
   };
 
+  // 기존 습관 이름 수정 제출 처리
   const handleUpdateHabit = async (habitId) => {
     const trimmedName = editingHabitNames[habitId]?.trim();
 
+    // 빈 이름 수정 방지
     if (!trimmedName) {
       toast.error("습관 이름을 입력해주세요.");
       return;
@@ -148,6 +169,7 @@ export default function HabitsPage() {
     }
   };
 
+  // 특정 습관을 더 이상 진행하지 않고 완전히 중단 처리
   const handleEndHabit = async (habitId) => {
     const isConfirmed = window.confirm(
       "이 습관을 중단하시겠습니까?\n\n기존 기록은 유지됩니다."
@@ -172,10 +194,18 @@ export default function HabitsPage() {
     }
   };
 
+  // =============================================================================
+  // 라이프사이클 관리 (useEffect) 구역
+  // =============================================================================
+  
+  // 컴포넌트 마운트 시 및 URL 파라미터(studyId) 변경 시 페이지 데이터 일괄 로드
   useEffect(() => {
     loadHabitsPage();
   }, [studyId]);
 
+  // =============================================================================
+  // 데이터 미도달 예외 차단용 Early Return 구역
+  // =============================================================================
   if (isLoading) {
     return (
       <section className="rounded-3xl bg-white p-8 text-center text-gray-500 shadow-sm">
@@ -184,8 +214,12 @@ export default function HabitsPage() {
     );
   }
 
+  // =============================================================================
+  // 메인 레이아웃 리턴 구역
+  // =============================================================================
   return (
     <section className="space-y-8">
+      {/* 상단 헤더 네비게이션 카드 구역 */}
       <div className="rounded-3xl bg-white p-8 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <Link to={`/studies/${studyId}`}>
@@ -205,6 +239,7 @@ export default function HabitsPage() {
         </div>
       </div>
 
+      {/* 메인 습관 리스트 및 관리 컨테이너 카드 구역 */}
       <div className="rounded-3xl bg-white p-8 shadow-sm">
         <div className="flex items-center justify-between gap-4">
           <h2 className="text-xl font-bold text-gray-900">습관 목록</h2>
@@ -217,6 +252,7 @@ export default function HabitsPage() {
           </Button>
         </div>
 
+        {/* '목록 수정' 활성화 시 노출되는 새 습관 생성 폼 */}
         {isEditingList && (
           <div className="mt-8 rounded-2xl border border-[#E5E2DA] bg-[#F6F4EF] p-5">
             <p className="text-sm font-semibold text-gray-800">새 습관 추가</p>
@@ -239,11 +275,13 @@ export default function HabitsPage() {
           </div>
         )}
 
+        {/* 습관 리스트가 텅 비었을 때 */}
         {habits.length === 0 ? (
           <p className="mt-8 rounded-2xl bg-[#F6F4EF] p-8 text-center text-gray-500">
             아직 습관이 없어요. 목록 수정을 눌러 습관을 생성해보세요.
           </p>
         ) : (
+          /* 동적 습관 목록 출력 */
           <ul className="mt-8 space-y-3">
             {habits.map((habit) => {
               const isChecked = checkedHabitIds.includes(habit.habitId);
@@ -260,6 +298,7 @@ export default function HabitsPage() {
                       : "border-[#E5E2DA] bg-[#F6F4EF]",
                   ].join(" ")}
                 >
+                  {/* 목록 수정 모드 UI */}
                   {isEditingList ? (
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                       <input
@@ -292,6 +331,7 @@ export default function HabitsPage() {
                       </div>
                     </div>
                   ) : (
+                    /* 일반 사용자 체크 모드 UI */
                     <div className="flex items-center justify-between">
                       <span
                         className={[

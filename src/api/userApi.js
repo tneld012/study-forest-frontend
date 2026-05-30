@@ -8,15 +8,25 @@ export async function getMySummary() {
 }
 
 // 🏠 내 스터디 목록 조회
-export async function getMyStudies() {
-  const response = await apiClient.get("/users/me/studies");
+export async function getMyStudies({ page = 1, pageSize = 10 } = {}) {
+  const response = await apiClient.get("/users/me/studies", {
+    params: {
+      page,
+      pageSize,
+    },
+  });
 
   return response.data;
 }
 
 // 🏠 내 게시글 목록 조회
-export async function getMyPosts() {
-  const response = await apiClient.get("/users/me/posts");
+export async function getMyPosts({ page = 1, pageSize = 10 } = {}) {
+  const response = await apiClient.get("/users/me/posts", {
+    params: {
+      page,
+      pageSize,
+    },
+  });
 
   return response.data;
 }
@@ -29,8 +39,13 @@ export async function getMyComments() {
 }
 
 // 🏠 내 집중 기록 목록 조회
-export async function getMyFocusSessions() {
-  const response = await apiClient.get("/users/me/focus-sessions");
+export async function getMyFocusSessions({ page = 1, pageSize = 10 } = {}) {
+  const response = await apiClient.get("/users/me/focus-sessions", {
+    params: {
+      page,
+      pageSize,
+    },
+  });
 
   return response.data;
 }
