@@ -590,8 +590,7 @@ export default function StudyDetailPage() {
         ) : (
           <ul className="mt-8 space-y-4">
             {comments.map((comment) => {
-              const currentUserId = user?.userId ?? user?.id;
-              const isMine = currentUserId === comment.authorId;
+              const isMine = user?.userId === comment.authorId;
               const isEditing = editingCommentId === comment.commentId;
 
               return (
