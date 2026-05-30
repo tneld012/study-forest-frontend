@@ -18,3 +18,13 @@ export async function getPostList({
 
   return response.data;
 }
+
+// 👨🏻‍👨🏻‍👦🏻 게시글 생성
+export async function createPost({ title, content }) {
+  const response = await apiClient.post("/posts", {
+    title,
+    content,
+  });
+
+  return response.data;
+}
