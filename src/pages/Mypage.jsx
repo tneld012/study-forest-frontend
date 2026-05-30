@@ -247,28 +247,41 @@ export default function MyPage() {
       <div className="rounded-3xl bg-white p-8 shadow-sm">
         <h2 className="text-xl font-bold text-gray-900">내 스터디</h2>
 
-        <ul className="mt-6 space-y-3">
-          {studies.map((study) => (
-            <li key={study.studyId}>
-              <Link
-                to={`/studies/${study.studyId}`}
-                className="block rounded-2xl bg-[#F6F4EF] p-5 hover:bg-[#E7F3E7]"
-              >
-                <div className="flex justify-between gap-4">
-                  <div>
-                    <p className="font-bold text-gray-900">{study.name}</p>
-                    <p className="mt-1 text-sm text-gray-500">
-                      {study.introduce}
-                    </p>
+        {/* 내 스터디 Empty State */}
+        {studies.length === 0 ? (
+          <div className="mt-6 rounded-2xl bg-[#F6F4EF] p-8 text-center">
+            <p className="text-gray-500">아직 참여 중인 스터디가 없어요.</p>
+            <Link
+              to="/studies/new"
+              className="mt-4 inline-block font-semibold text-[#578246]"
+            >
+              스터디 만들기 →
+            </Link>
+          </div>
+        ) : (
+          <ul className="mt-6 space-y-3">
+            {studies.map((study) => (
+              <li key={study.studyId}>
+                <Link
+                  to={`/studies/${study.studyId}`}
+                  className="block rounded-2xl bg-[#F6F4EF] p-5 hover:bg-[#E7F3E7]"
+                >
+                  <div className="flex justify-between gap-4">
+                    <div>
+                      <p className="font-bold text-gray-900">{study.name}</p>
+                      <p className="mt-1 text-sm text-gray-500">
+                        {study.introduce}
+                      </p>
+                    </div>
+                    <span className="text-sm font-semibold text-[#578246]">
+                      {study.role}
+                    </span>
                   </div>
-                  <span className="text-sm font-semibold text-[#578246]">
-                    {study.role}
-                  </span>
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
 
         {/* 내 스터디 목록 더보기 버튼 */}
         {hasNextStudyPage && (
@@ -288,24 +301,37 @@ export default function MyPage() {
       <div className="rounded-3xl bg-white p-8 shadow-sm">
         <h2 className="text-xl font-bold text-gray-900">내 게시글</h2>
 
-        <ul className="mt-6 space-y-3">
-          {posts.map((post) => (
-            <li key={post.postId}>
-              <Link
-                to={`/community/${post.postId}`}
-                className="block rounded-2xl bg-[#F6F4EF] p-5 hover:bg-[#E7F3E7]"
-              >
-                <p className="font-bold text-gray-900">{post.title}</p>
-                <p className="mt-1 line-clamp-2 text-sm text-gray-500">
-                  {post.content}
-                </p>
-                <p className="mt-2 text-xs text-gray-400">
-                  좋아요 {post.likeCount} · 댓글 {post.commentCount}
-                </p>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        {/* 내 게시글 Empty State */}
+        {posts.length === 0 ? (
+          <div className="mt-6 rounded-2xl bg-[#F6F4EF] p-8 text-center">
+            <p className="text-gray-500">아직 작성한 게시글이 없어요.</p>
+            <Link
+              to="/community/new"
+              className="mt-4 inline-block font-semibold text-[#578246]"
+            >
+              첫 게시글 작성하기 →
+            </Link>
+          </div>
+        ) : (
+          <ul className="mt-6 space-y-3">
+            {posts.map((post) => (
+              <li key={post.postId}>
+                <Link
+                  to={`/community/${post.postId}`}
+                  className="block rounded-2xl bg-[#F6F4EF] p-5 hover:bg-[#E7F3E7]"
+                >
+                  <p className="font-bold text-gray-900">{post.title}</p>
+                  <p className="mt-1 line-clamp-2 text-sm text-gray-500">
+                    {post.content}
+                  </p>
+                  <p className="mt-2 text-xs text-gray-400">
+                    좋아요 {post.likeCount} · 댓글 {post.commentCount}
+                  </p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
 
         {/* 내 게시글 목록 더보기 버튼 */}
         {hasNextPostPage && (
@@ -325,58 +351,72 @@ export default function MyPage() {
       <div className="rounded-3xl bg-white p-8 shadow-sm">
         <h2 className="text-xl font-bold text-gray-900">내 댓글</h2>
 
-        <ul className="mt-6 space-y-3">
-          {comments.map((comment) => {
-            // 소속 타입 세션에 따라 동적 URL 설정
-            const link =
-              comment.type === "POST"
-                ? `/community/${comment.target.postId}`
-                : `/studies/${comment.target.studyId}`;
+        {/* 내 댓글 Empty State */}
+        {comments.length === 0 ? (
+          <div className="mt-6 rounded-2xl bg-[#F6F4EF] p-8 text-center text-gray-500">
+            아직 작성한 댓글이 없어요.
+          </div>
+        ) : (
+          <ul className="mt-6 space-y-3">
+            {comments.map((comment) => {
+              // 소속 타입 세션에 따라 동적 URL 설정
+              const link =
+                comment.type === "POST"
+                  ? `/community/${comment.target.postId}`
+                  : `/studies/${comment.target.studyId}`;
 
-            return (
-              <li key={comment.commentId}>
-                <Link
-                  to={link}
-                  className="block rounded-2xl bg-[#F6F4EF] p-5 hover:bg-[#E7F3E7]"
-                >
-                  <p className="text-sm font-semibold text-[#578246]">
-                    {comment.type === "POST" ? "게시글 댓글" : "스터디 댓글"}
-                  </p>
-                  <p className="mt-2 text-gray-700">{comment.content}</p>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+              return (
+                <li key={comment.commentId}>
+                  <Link
+                    to={link}
+                    className="block rounded-2xl bg-[#F6F4EF] p-5 hover:bg-[#E7F3E7]"
+                  >
+                    <p className="text-sm font-semibold text-[#578246]">
+                      {comment.type === "POST" ? "게시글 댓글" : "스터디 댓글"}
+                    </p>
+                    <p className="mt-2 text-gray-700">{comment.content}</p>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
 
       {/* 내 집중 몰입 기록 타임라인 세션 리스트 구역 */}
       <div className="rounded-3xl bg-white p-8 shadow-sm">
         <h2 className="text-xl font-bold text-gray-900">내 집중 기록</h2>
 
-        <ul className="mt-6 space-y-3">
-          {focusSessions.map((session) => (
-            <li
-              key={session.focusSessionId}
-              className="rounded-2xl bg-[#F6F4EF] p-5"
-            >
-              <div className="flex justify-between gap-4">
-                <div>
-                  <p className="font-bold text-gray-900">
-                    {session.study.name}
-                  </p>
-                  <p className="mt-1 text-sm text-gray-500">
-                    {secondsToMinutes(session.elapsedSeconds)}분 집중
-                  </p>
-                </div>
+        {/* 내 집중 기록 Empty State */}
+        {focusSessions.length === 0 ? (
+          <div className="mt-6 rounded-2xl bg-[#F6F4EF] p-8 text-center text-gray-500">
+            아직 집중 기록이 없어요.
+          </div>
+        ) : (
+          <ul className="mt-6 space-y-3">
+            {focusSessions.map((session) => (
+              <li
+                key={session.focusSessionId}
+                className="rounded-2xl bg-[#F6F4EF] p-5"
+              >
+                <div className="flex justify-between gap-4">
+                  <div>
+                    <p className="font-bold text-gray-900">
+                      {session.study.name}
+                    </p>
+                    <p className="mt-1 text-sm text-gray-500">
+                      {secondsToMinutes(session.elapsedSeconds)}분 집중
+                    </p>
+                  </div>
 
-                <span className="font-bold text-[#578246]">
-                  +{session.pointDelta}P
-                </span>
-              </div>
-            </li>
-          ))}
-        </ul>
+                  <span className="font-bold text-[#578246]">
+                    +{session.pointDelta}P
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
 
         {/* 내 집중 기록 목록 더보기 버튼 */}
         {hasNextFocusPage && (
